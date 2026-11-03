@@ -165,7 +165,7 @@
     const setup = `<details class="card setup" ${d ? '' : 'open'}><summary>${d ? 'Change my plan' : 'Set up my own plan'}</summary>
         <p class="note">Saved only in this browser on this device. Nothing is sent anywhere.</p>
         <label class="f" for="pp">Protocol or program</label>
-        <select id="pp"><option value="">Choose...</option>${opts}</select>
+        <select id="pp" autocomplete="off"><option value="" ${p ? '' : 'selected'}>Choose...</option>${opts}</select>
         <label class="f" for="pd">Surgery or start date (optional)</label>
         <input type="date" id="pd" value="${p && p.date ? esc(p.date) : ''}">
         <div class="btns"><button class="btn" id="save">Save</button>${p ? '<button class="btn danger" id="clear">Clear my plan</button>' : ''}</div>
@@ -404,7 +404,7 @@
         <div class="btns"><button class="btn danger" id="reset">Reset all data on this device</button></div><p class="note" id="resetmsg"></p></div>
       <div class="card safety"><div class="cardhead"><h3>${V5.icon('alert')} Important safety information</h3></div>
         <p>This app does not diagnose or treat, and it does not replace your care team. ${esc(DISCLAIMER)}</p>
-        <p><strong>If something feels wrong, call your care team. In an emergency, call 911.</strong></p></div>
+        <p><strong>If something feels wrong, call your care team. In an emergency, call 911.</strong></p>${V5.callBtn('block')}</div>
       <p class="note center">Demo: not approved by Dr. Cole or Conway Regional. Built ${esc(DATA.generated)} from <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Source page</a>.</p>`;
     document.getElementById('reset').onclick = () => {
       if (!confirm('Remove your plan, checkmarks, appointments and saved staff bundles from this browser?')) return;

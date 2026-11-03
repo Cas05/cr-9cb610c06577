@@ -18,6 +18,11 @@
   const b64e = o => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const b64d = s => JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/')))));
   const phoneDigits = s => String(s || '').replace(/[^\d+]/g, '').slice(0, 16);
+  // COSMC clinic phone (supplied by COSMC). Used whenever an assignment does not override it.
+  const CLINIC_PHONE = V5.CLINIC_PHONE = '5013291510', CLINIC_PHONE_TXT = V5.CLINIC_PHONE_TXT = '(501) 329-1510';
+  const clinicPh = p => phoneDigits(p && p.phone) || CLINIC_PHONE;
+  const fmtPh = d => /^\d{10}$/.test(d) ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d;
+  V5.callBtn = (cls) => `<a class="btn ${cls || ''}" href="tel:${CLINIC_PHONE}">${icon('phone')} Call the clinic ${CLINIC_PHONE_TXT}</a>`;
 
   V5.init = function (api) { R = api; };
 
@@ -215,7 +220,8 @@
       </div>
       <div class="callcard">${icon('alert', 'cc-ic')}<div class="cc-body"><strong>Safety first</strong>
         <p>This app is an educational reference, not medical advice. Follow your surgeon's and therapist's instructions. If something feels wrong, call your care team.</p>
-        <small><strong>Emergency? Call 911.</strong></small></div></div>`;
+        <small>Clinic: <a href="tel:${CLINIC_PHONE}">${CLINIC_PHONE_TXT}</a> · <strong>Emergency? Call 911.</strong></small></div>
+        <a class="btn sm callbtn" href="tel:${CLINIC_PHONE}">${icon('phone')} Call</a></div>`;
   }
   function todayHtml(p) {
     const d = R.BY_ID[p.id], I = V5.planInfo(d, p), days = I.days, ph = I.ph, ci = I.ci;
@@ -244,6 +250,7 @@
     }
     h += extrasHtml(p) + apptRow(p) + contactHtml(p);
     if (days >= 0) h += `<button class="btn outline block" id="skip">${icon('pause')} It hurts - skip today</button><div id="skipmsg"></div>`;
+    h += `<p class="note center">Not your plan? <a href="#/plan">Change or clear it on My plan</a>.</p>`;
     return h;
   }
   // Today's Focus: the exercise items of the week block that contains today (as written), falling back to the whole phase.
@@ -283,11 +290,11 @@
   }
   V5.extrasHtml = extrasHtml;
   function contactHtml(p) {
-    const ph = phoneDigits(p.phone);
+    const ph = clinicPh(p);
     return `<div class="callcard">${icon('alert', 'cc-ic')}<div class="cc-body"><strong>When to call us</strong>
       <p>${p.callnote ? R.esc(p.callnote) : 'Follow your surgeon\'s instructions. If something feels wrong, call your care team.'}</p>
-      ${ph ? '' : '<small>Your care team can add the clinic phone when they assign your plan.</small>'}<small><strong>Emergency? Call 911.</strong></small></div>
-      ${ph ? `<a class="btn sm callbtn" href="tel:${R.esc(ph)}">${icon('phone')} Call</a>` : ''}</div>`;
+      <small>Clinic: <a href="tel:${R.esc(ph)}">${R.esc(fmtPh(ph))}</a></small><small><strong>Emergency? Call 911.</strong></small></div>
+      <a class="btn sm callbtn" href="tel:${R.esc(ph)}">${icon('phone')} Call</a></div>`;
   }
   V5.wireHome = function () {
     V5.wireCode();
@@ -306,7 +313,7 @@
       draw();
     }
     const sn = $('seen'); if (sn) sn.onclick = () => { const s = R.store.get(SEEN_KEY, {}); s[p.id + '|' + p.date] = +sn.dataset.ci; R.store.set(SEEN_KEY, s); sn.remove(); };
-    const sk = $('skip'); if (sk) sk.onclick = () => { const ph = phoneDigits(p.phone); $('skipmsg').innerHTML = `<div class="disclaimer">Skipping today is okay. Do not push through pain. If it keeps hurting, contact your care team.${ph ? ` <a href="tel:${R.esc(ph)}">Call the office</a>` : ''}</div>`; };
+    const sk = $('skip'); if (sk) sk.onclick = () => { const ph = clinicPh(p); $('skipmsg').innerHTML = `<div class="disclaimer">Skipping today is okay. Do not push through pain. If it keeps hurting, contact your care team.${ph ? ` <a href="tel:${R.esc(ph)}">Call the office</a>` : ''}</div>`; };
     main().querySelectorAll('input[data-ck]').forEach(cb => cb.onchange = () => {
       const all = R.store.get(CHECK_KEY, {}); const k = cb.dataset.ck; if (cb.checked) all[k] = 1; else delete all[k];
       R.store.set(CHECK_KEY, all); cb.closest('.check').classList.toggle('done', cb.checked);
@@ -442,26 +449,24 @@
   // ---------- Care team (athlete-facing; only people we actually know) ----------
   // COSMC Sports Medicine care team shown on the Staff tab. Add a role later, e.g. { name: 'Sloane', role: '...' }.
   const CARE_TEAM = V5.CARE_TEAM = [
-    { name: 'Dr. Tom Roberts', role: 'Non-operative Sports Medicine Physician' },
-    { name: 'Sloane Precure', role: 'Physician Assistant to Dr. Cole (clinic and surgery)' },
+    { name: 'Dr. Tom Roberts', role: 'Orthopedic and Sports Medicine Physician' },
+    { name: 'Sloane Precure', role: 'Physician Assistant' },
     { name: 'Melanie', role: 'Sports Medicine Nurse Navigator' },
-    { name: 'Emily', role: "Dr. Cole's clinic assistant" }
+    { name: 'Emily', role: 'Direct Assist' }
   ];
   const teamInitial = n => String(n).replace(/^dr\.?\s+/i, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
   function careTeamHtml() {
-    const p = getPlan(), ph = p ? phoneDigits(p.phone) : '';
+    const p = getPlan(), ph = clinicPh(p);
     const initials = s => String(s).replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
-    let h = `<div class="card person-card"><div class="person"><span class="avatar">AC</span><span><strong>Dr. Austin Cole, MD</strong><small>Orthopedic Surgeon</small></span></div>
-      <a class="minirow" href="#/protocols">${icon('book', 'mini-ic')}<span>Browse protocols</span>${icon('chev', 'chev')}</a></div>`;
+    let h = `<div class="card person-card"><div class="person"><span class="avatar">AC</span><span><strong>Dr. Austin Cole, MD</strong><small>Orthopedic and Sports Medicine Surgeon</small></span></div></div>`;
     h += `<div class="card"><div class="cardhead"><h3>COSMC Sports Medicine care team</h3></div>
       <ul class="teamlist">${CARE_TEAM.map(m => `<li><span class="avatar sm">${R.esc(teamInitial(m.name))}</span><span><strong>${R.esc(m.name)}</strong><small>${R.esc(m.role || 'COSMC Sports Medicine care team')}</small></span></li>`).join('')}</ul></div>`;
     if (p && p.by) h += `<div class="card person-card"><div class="person"><span class="avatar alt">${R.esc(initials(p.by))}</span><span><strong>${R.esc(p.by)}</strong><small>Assigned your plan</small></span></div>
       ${(p.pt || []).length ? `<div class="guide-chips">${p.pt.map(x => `<span class="gchip">${icon('chat')} ${R.esc(x[0])}</span>`).join('')}</div>` : ''}</div>`;
     h += `<div class="card"><div class="cardhead"><h3>Questions about your recovery?</h3></div>
-      <p>For questions about pain, exercise restrictions or changes in symptoms, contact your care team using the contact information they gave you.</p>
+      <p>For questions about pain, exercise restrictions or changes in symptoms, call the clinic.</p>
       ${p && p.callnote ? `<p class="note"><strong>From your care team:</strong> ${R.esc(p.callnote)}</p>` : ''}
-      ${ph ? `<a class="btn block" href="tel:${R.esc(ph)}">${icon('phone')} Call the clinic</a>`
-        : `<details class="contact"><summary>${icon('phone')} Contact information</summary><p class="note">${p ? 'No clinic phone number was added to your plan. Use the contact details your care team gave you at your visit.' : 'When your care team assigns your plan, the clinic phone number they add shows here.'}</p></details>`}
+      <a class="btn block" href="tel:${R.esc(ph)}">${icon('phone')} Call the clinic ${R.esc(fmtPh(ph))}</a>
       <p class="sos">${icon('alert')} Emergency? Call 911.</p></div>`;
     return h;
   }
@@ -481,12 +486,12 @@
     main().innerHTML = `<p class="crumb"><a href="#/staff">${icon('arrowl')} Care team</a></p>
       <div class="disclaimer">No login and nothing is stored on a server. Do not type last names, birth dates or any medical details about a patient. A first name is optional.</div>
       <div class="card step-card"><div class="cardhead"><h3><span class="stepn">1</span> Who and what</h3></div>
-        ${bundles.length ? `<label class="f" for="sb">Start from a saved bundle</label><select id="sb"><option value="">Choose...</option>${bundles.map((b, i) => `<option value="${i}">${R.esc(b.name)}</option>`).join('')}</select>` : ''}
+        ${bundles.length ? `<label class="f" for="sb">Start from a saved bundle</label><select id="sb" autocomplete="off"><option value="" selected>Choose...</option>${bundles.map((b, i) => `<option value="${i}">${R.esc(b.name)}</option>`).join('')}</select>` : ''}
         <label class="f" for="sby">Assigned by</label><input class="search" id="sby" list="sbylist" placeholder="Type a name or tap one below" maxlength="50" value="${R.esc(sd.by || '')}"><datalist id="sbylist">${['Dr. Austin Cole'].concat(CARE_TEAM.map(m => m.name)).map(n => `<option value="${R.esc(n)}">`).join('')}</datalist>
         <div class="quickpick" aria-label="Quick pick">${['Dr. Austin Cole'].concat(CARE_TEAM.map(m => m.name)).map(n => `<button type="button" class="qp" data-by="${R.esc(n)}">${R.esc(n)}</button>`).join('')}</div>
         <label class="f" for="sn">Athlete's first name (optional)</label><input class="search" id="sn" maxlength="40" placeholder="First name only">
-        <label class="f" for="sp">Main protocol</label><select id="sp"><option value="">Choose...</option>${protoOpts}</select>
-        <label class="f" for="sd">Surgery or start date</label><input type="date" id="sd">
+        <label class="f" for="sp">Main protocol</label><select id="sp" autocomplete="off"><option value="" selected>Choose...</option>${protoOpts}</select>
+        <label class="f" for="sd">Surgery or start date</label><input type="date" id="sd" autocomplete="off">
       </div>
       <div class="card step-card"><div class="cardhead"><h3><span class="stepn">2</span> Add-ons (optional)</h3></div>
         <label class="f">Also assign these documents</label>
@@ -498,7 +503,7 @@
         <div id="apl"></div><div class="btns"><button class="btn secondary" id="apadd">+ Add appointment</button></div>
       </div>
       <div class="card step-card"><div class="cardhead"><h3><span class="stepn">3</span> Contact and link</h3></div>
-        <label class="f" for="sph">Clinic phone for the Call button (optional)</label><input class="search" id="sph" inputmode="tel" maxlength="20" value="${R.esc(sd.ph || '')}">
+        <label class="f" for="sph">Clinic phone for the Call button</label><input class="search" id="sph" inputmode="tel" maxlength="20" autocomplete="off" value="${R.esc(sd.ph || CLINIC_PHONE_TXT)}"><p class="note">Defaults to the COSMC clinic, ${CLINIC_PHONE_TXT}. Change it only if this athlete should call a different number.</p>
         <label class="f" for="sc">When to call us (optional, your wording)</label><textarea class="search" id="sc" rows="3" maxlength="400">${R.esc(sd.c || '')}</textarea>
         <label class="f" for="sbase">Web address of this app (needed for links and QR codes)</label><input class="search" id="sbase" placeholder="https://..." value="${R.esc(defBase)}">
         <div class="btns"><button class="btn" id="gen">Make link, QR code and code</button></div>
@@ -515,7 +520,7 @@
       const p = $('sp').value, d = $('sd').value; if (!p) { alert('Choose a main protocol.'); return null; } if (!validDate(d)) { alert('Choose the surgery or start date.'); return null; }
       const o = { v: 1, p, d };
       const n = $('sn').value.trim(), by = $('sby').value.trim(), ph = phoneDigits($('sph').value), c = $('sc').value.trim();
-      if (n) o.n = n; if (by) o.by = by; if (ph) o.ph = ph; if (c) o.c = c;
+      if (n) o.n = n; if (by) o.by = by; if (ph && ph !== CLINIC_PHONE && ph !== '1' + CLINIC_PHONE) o.ph = ph; if (c) o.c = c;
       const x = [...$('xl').querySelectorAll('input:checked')].map(i => i.value); if (x.length) o.x = x;
       const t = [...$('ptl').children].map(r => [r.querySelector('.pt-t').value.trim(), r.querySelector('.pt-i').value.trim()]).filter(r => r[0]); if (t.length) o.t = t;
       const a = [...$('apl').children].map(r => [r.querySelector('.ap-d').value, r.querySelector('.ap-m').value, r.querySelector('.ap-t').value.trim()]).filter(r => validDate(r[0])); if (a.length) o.a = a;
@@ -537,7 +542,7 @@
         <label class="f" for="olink">Link</label><input class="search" id="olink" readonly value="${R.esc(url)}">
         <div class="btns"><button class="btn" id="ocopy">Copy link</button></div>
         ${qr}
-        ${code ? `<p>Short code: <strong>${code}</strong> <span class="note">(athlete types it on the home screen; the code carries only the protocol and date)</span></p>` : '<p class="note">No short code is made when you add a name, extras, items, appointments or a phone number, because the code can only carry the protocol and date. Use the link or QR code.</p>'}
+        ${code ? `<p>Short code: <strong>${code}</strong> <span class="note">(athlete types it on the home screen; the code carries only the protocol and date)</span></p>` : '<p class="note">No short code is made when you add a name, extras, items, appointments or a non-default phone number, because the code can only carry the protocol and date. Use the link or QR code.</p>'}
         <p class="note">Nothing was saved or sent anywhere. Treat the link like any message: it contains what you typed above.</p>
         <label class="f" for="bn">Save this setup as a bundle on this computer (optional)</label>
         <input class="search" id="bn" placeholder="e.g. THA week 0 package" maxlength="40"><div class="btns"><button class="btn secondary" id="bsave">Save bundle</button></div></div>`;
