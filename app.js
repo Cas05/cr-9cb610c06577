@@ -49,13 +49,12 @@
   }
   function home() {
     setTitle(''); navActive('home');
-    main.innerHTML = `${V5.homeTop()}<h2 class="sect">Explore Dr. Cole's protocols</h2>${browseHtml()}`;
-    main.querySelectorAll('.sect').forEach(x => x.classList.add('sect-big'));
-    V5.wireHome(); wireBrowse();
+    main.innerHTML = V5.homeTop();
+    V5.wireHome();
   }
   function browse() {
-    setTitle('Protocols'); navActive('plan'); head('All protocols', `${DATA.docs.length} documents from Dr. Cole's protocols page.`, 'Protocols');
-    main.innerHTML = `<p class="crumb"><a href="#/plan">My Plan</a> / All protocols</p>${browseHtml()}`;
+    setTitle('Protocols'); navActive('protocols'); head('Protocols', `Search or browse all ${DATA.docs.length} documents from Dr. Cole's protocols page.`, "Explore Dr. Cole's protocols");
+    main.innerHTML = browseHtml();
     wireBrowse();
   }
   function tile(c, n) { return `<a class="tile" href="#/c/${slug(c)}"><span class="tile-ic">${V5.icon(V5.catIcon(c))}</span><strong>${esc(c)}</strong><span>${n} document${n === 1 ? '' : 's'}</span></a>`; }
@@ -80,9 +79,9 @@
   function category(s) {
     const c = DATA.categories.find(x => slug(x) === s);
     if (!c) return notFound();
-    setTitle(c); navActive('home'); head(c, `${DATA.docs.filter(d => d.category === c).length} documents`, 'Protocols');
+    setTitle(c); navActive('protocols'); head(c, `${DATA.docs.filter(d => d.category === c).length} documents`, 'Protocols');
     const docs = DATA.docs.filter(d => d.category === c);
-    main.innerHTML = `<p class="crumb"><a href="#/browse">All protocols</a> / ${esc(c)}</p>
+    main.innerHTML = `<p class="crumb"><a href="#/protocols">Protocols</a> / ${esc(c)}</p>
       <p class="note">Titles and grouping are as listed on Dr. Cole's protocols page.</p>${listHtml(docs, false)}`;
   }
 
@@ -102,14 +101,14 @@
 
   function detail(id) {
     const d = BY_ID[id]; if (!d) return notFound();
-    setTitle(d.title); navActive('home'); head(d.title, d.category, 'Full protocol');
+    setTitle(d.title); navActive('protocols'); head(d.title, d.category, 'Full protocol');
     const plan = store.get(PLAN_KEY, null);
     const hl = plan && plan.id === d.id ? matchSections(d, plan.date) : new Set();
     const pages = (d.page_images || []);
     const secs = d.sections || [];
     const split = !!d.split_on;
     main.innerHTML = `
-      <p class="crumb"><a href="#/browse">All protocols</a> / <a href="#/c/${slug(d.category)}">${esc(d.category)}</a></p>
+      <p class="crumb"><a href="#/protocols">Protocols</a> / <a href="#/c/${slug(d.category)}">${esc(d.category)}</a></p>
       <div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>
       <div class="btns">
         <a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document (${esc((d.type || '').toUpperCase())})</a>
@@ -175,7 +174,7 @@
     let html;
     if (!d) {
       html = `<section class="summary"><div class="sum-eyebrow">No active protocol</div><h2>Set up your plan</h2><p>Use the code or link from your care team, or pick your protocol and surgery date below.</p><div class="sum-actions"><button class="sum-link" id="demo2">Try a demo plan ${V5.icon('chev')}</button></div></section>
-        ${V5.codeCardHtml()}${setup}${browseCard}`;
+        ${V5.codeCardHtml()}${setup}`;
     } else {
       const I = V5.planInfo(d, p), seg = sessionStorage.getItem('rehabProto.planseg') || 'ex';
       const cur = I.ci >= 0 ? I.ph[I.ci] : null;
@@ -189,7 +188,7 @@
       if (seg === 'protocol') html += protocolSeg(d, p);
       else if (seg === 'progress') html += progressSeg(d, p, I);
       else html += exerciseSeg(d, p, I) + V5.codeCardHtml();
-      html += setup + browseCard;
+      html += setup;
     }
     main.innerHTML = html; wireShare(p); V5.wireCode();
     const dm = document.getElementById('demo2'); if (dm) dm.onclick = () => V5.loadDemo();
@@ -422,7 +421,7 @@
     if (a === 'p' || a === 'd') detail(decodeURIComponent(b || ''));
     else if (a === 'c') category(b);
     else if (a === 'plan') plan();
-    else if (a === 'browse') browse();
+    else if (a === 'browse' || a === 'protocols') browse();
     else if (a === 'assign') assign(decodeURIComponent(b || ''), decodeURIComponent(h.split('/')[2] || ''), decodeURIComponent(h.split('/')[3] || ''));
     else if (window.V5 && V5.routes[a]) V5.routes[a](...h.split('/').slice(1));
     else if (a === 'about') about();

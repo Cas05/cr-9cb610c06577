@@ -109,8 +109,8 @@
       ${I.end && I.days != null && I.days > I.end ? '<p class="note">You are past the end of the written timeline. Your care team decides when you are cleared.</p>' : ''}
     </div>`;
   };
-  V5.codeCardHtml = function () {
-    return `<div class="card codecard"><div class="cardhead"><h3>Enter a protocol code</h3></div>
+  V5.codeCardHtml = function (title) {
+    return `<div class="card codecard" id="codecard"><div class="cardhead"><h3>${title || 'Enter a protocol code'}</h3></div>
       <p class="note">Use the link, QR code or code from your care team. A code looks like CR-44-261001.</p>
       <label class="f" for="code">Protocol code</label>
       <div class="codein"><input class="search" id="code" placeholder="CR-..." autocomplete="off" autocapitalize="characters"><button class="btn" id="usecode">Use code</button></div>
@@ -167,15 +167,55 @@
   // ---------- Home top (Today) ----------
   V5.homeTop = function () {
     const p = getPlan();
-    if (!p) { setHead('Welcome!', "Dr. Cole's rehab protocols, on your phone."); return welcome(); }
+    if (!p) { setHead('Welcome, athlete!', "Dr. Cole's rehab protocols, made simple.", 'COSMC Sports Medicine'); return welcome(); }
     setHead(p.name ? `Hello, ${p.name}!` : 'Hello!', "Here's where you are and what to do today.");
     return todayHtml(p);
   };
+  const heroArt = `<svg class="hero-art" viewBox="0 0 220 220" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="#fff" stroke-linecap="round">
+        <path d="M30 210V90a80 80 0 0 1 160 0v120" stroke-opacity=".10" stroke-width="16"/>
+        <path d="M54 210V90a56 56 0 0 1 112 0v120" stroke-opacity=".10" stroke-width="16"/>
+        <path d="M18 210V90a92 92 0 0 1 184 0v120M42 210V90a68 68 0 0 1 136 0v120M66 210V90a44 44 0 0 1 88 0v120" stroke-opacity=".28" stroke-width="1.5"/>
+        <path d="M18 168h48M154 168h48" stroke-opacity=".5" stroke-width="2" stroke-dasharray="4 5"/>
+        <circle cx="110" cy="96" r="30" stroke-opacity=".18" stroke-width="7"/>
+        <path d="M110 66a30 30 0 1 1-28.5 39.3" stroke="#bfe8d2" stroke-width="7"/>
+        <path d="M99 96l8 8 15-17" stroke-width="5" stroke-linejoin="round"/>
+      </g></svg>`;
   function welcome() {
-    return `<section class="summary welcome"><div class="sum-eyebrow">COSMC Sports Medicine</div><h2>Start your recovery plan</h2>
-        <p>Follow Dr. Cole's protocol one day at a time: your phase, today's exercises and what's next. Your plan stays on this phone.</p>
-        <div class="sum-actions"><a class="sum-btn" href="#/plan">Set up my plan</a><button class="sum-link" id="demo">Try a demo plan ${icon('chev')}</button></div></section>
-      ${V5.codeCardHtml()}`;
+    const team = ['Dr. Austin Cole'].concat(CARE_TEAM.map(m => m.name));
+    const step = (n, t, s, x) => `<li><span class="stepn">${n}</span><div><strong>${t}</strong><small>${s}</small>${x || ''}</div></li>`;
+    const preview = `<div class="roadprev" aria-label="Preview of Road to Return"><div class="rp-track"><span></span></div><ol>${[1, 2, 3, 4, 5].map(k => `<li class="${k === 1 ? 'cur' : ''}"><i></i>Phase ${k}</li>`).join('')}</ol></div>`;
+    const feat = (ic, t, s) => `<div class="feat"><span class="feat-ic">${icon(ic)}</span><strong>${t}</strong><small>${s}</small></div>`;
+    return `<section class="summary hero-empty">${heroArt}
+        <div class="sum-eyebrow">COSMC Sports Medicine</div>
+        <h2>Your comeback<br>starts here.</h2>
+        <p>Dr. Cole's rehab protocol, one day at a time. See your phase, what to do today and what's next.</p>
+        <div class="sum-actions"><button class="sum-btn" id="gocode">Enter plan code</button><a class="sum-link" href="#/plan">Build my own plan ${icon('chev')}</a></div>
+      </section>
+      ${V5.codeCardHtml('Enter plan code')}
+      <div class="card"><div class="cardhead"><h3>How it works</h3></div>
+        <ol class="howto">
+          ${step(1, 'Get your code', 'Your care team gives you a link, QR code or plan code.')}
+          ${step(2, 'Enter it', 'Type the code above or open the link. Your plan saves to this phone.')}
+          ${step(3, 'Follow your daily plan', 'Check off today\'s exercises and watch your Road to Return fill up.', preview)}
+        </ol></div>
+      <h2 class="sect">What you'll get</h2>
+      <div class="feats">
+        ${feat('check', 'Daily checklist', "Today's exercises from your protocol.")}
+        ${feat('flag', 'Road to Return', 'Where you are and what phase is next.')}
+        ${feat('cal', 'Calendar reminders', 'Add exercise days and visits to your phone calendar.')}
+        ${feat('phone', 'When to call us', 'Clear signs to contact your care team.')}
+      </div>
+      <div class="card ownplan"><div class="cardhead"><h3>No code yet?</h3></div>
+        <p>Pick your protocol and surgery date yourself. You can switch to your care team's plan any time.</p>
+        <div class="btns"><a class="btn" href="#/plan">Build my own plan</a><button class="btn secondary" id="demo">Try a demo plan</button></div></div>
+      <div class="quicklinks">
+        <a class="card linkrow" href="#/protocols">${icon('book', 'tile-ic')}<span><strong>Protocols</strong><small>Search or browse Dr. Cole's protocols</small></span>${icon('chev', 'chev')}</a>
+        <a class="card linkrow" href="#/staff">${icon('team', 'tile-ic')}<span><strong>Care team</strong><small>${R.esc(team.join(', '))}</small></span>${icon('chev', 'chev')}</a>
+      </div>
+      <div class="callcard">${icon('alert', 'cc-ic')}<div class="cc-body"><strong>Safety first</strong>
+        <p>This app is an educational reference, not medical advice. Follow your surgeon's and therapist's instructions. If something feels wrong, call your care team.</p>
+        <small><strong>Emergency? Call 911.</strong></small></div></div>`;
   }
   function todayHtml(p) {
     const d = R.BY_ID[p.id], I = V5.planInfo(d, p), days = I.days, ph = I.ph, ci = I.ci;
@@ -252,6 +292,7 @@
   V5.wireHome = function () {
     V5.wireCode();
     const dm = $('demo'); if (dm) dm.onclick = loadDemo;
+    const gc = $('gocode'); if (gc) gc.onclick = () => { const c = $('codecard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); const inp = $('code'); if (inp) inp.focus({ preventScroll: true }); };
     const p = getPlan();
     if (!p) return;
     const hw = $('homeweek');
@@ -399,11 +440,21 @@
   };
 
   // ---------- Care team (athlete-facing; only people we actually know) ----------
+  // COSMC Sports Medicine care team shown on the Staff tab. Add a role later, e.g. { name: 'Sloane', role: '...' }.
+  const CARE_TEAM = V5.CARE_TEAM = [
+    { name: 'Dr. Roberts', role: '' },
+    { name: 'Sloane', role: '' },
+    { name: 'Melanie', role: '' },
+    { name: 'Emily', role: '' }
+  ];
+  const teamInitial = n => (String(n).replace(/^dr\.?\s+/i, '').trim()[0] || '?').toUpperCase();
   function careTeamHtml() {
     const p = getPlan(), ph = p ? phoneDigits(p.phone) : '';
     const initials = s => String(s).replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
     let h = `<div class="card person-card"><div class="person"><span class="avatar">AC</span><span><strong>Dr. Austin Cole, MD</strong><small>Orthopedic Surgeon</small></span></div>
-      <p class="note">The protocols in this app come from Dr. Cole's protocols page.</p><a class="minirow" href="#/browse">${icon('book', 'mini-ic')}<span>Browse Dr. Cole's protocols</span>${icon('chev', 'chev')}</a></div>`;
+      <p class="note">The protocols in this app come from Dr. Cole's protocols page.</p><a class="minirow" href="#/protocols">${icon('book', 'mini-ic')}<span>Browse Dr. Cole's protocols</span>${icon('chev', 'chev')}</a></div>`;
+    h += `<div class="card"><div class="cardhead"><h3>COSMC Sports Medicine care team</h3></div>
+      <ul class="teamlist">${CARE_TEAM.map(m => `<li><span class="avatar sm">${R.esc(teamInitial(m.name))}</span><span><strong>${R.esc(m.name)}</strong><small>${R.esc(m.role || 'COSMC Sports Medicine care team')}</small></span></li>`).join('')}</ul></div>`;
     if (p && p.by) h += `<div class="card person-card"><div class="person"><span class="avatar alt">${R.esc(initials(p.by))}</span><span><strong>${R.esc(p.by)}</strong><small>Assigned your plan</small></span></div>
       ${(p.pt || []).length ? `<div class="guide-chips">${p.pt.map(x => `<span class="gchip">${icon('chat')} ${R.esc(x[0])}</span>`).join('')}</div>` : ''}</div>`;
     h += `<div class="card"><div class="cardhead"><h3>Questions about your recovery?</h3></div>
@@ -431,7 +482,8 @@
       <div class="disclaimer">No login and nothing is stored on a server. Do not type last names, birth dates or any medical details about a patient. A first name is optional.</div>
       <div class="card step-card"><div class="cardhead"><h3><span class="stepn">1</span> Who and what</h3></div>
         ${bundles.length ? `<label class="f" for="sb">Start from a saved bundle</label><select id="sb"><option value="">Choose...</option>${bundles.map((b, i) => `<option value="${i}">${R.esc(b.name)}</option>`).join('')}</select>` : ''}
-        <label class="f" for="sby">Assigned by</label><input class="search" id="sby" placeholder="e.g. Dr. Cole's team" maxlength="50" value="${R.esc(sd.by || '')}">
+        <label class="f" for="sby">Assigned by</label><input class="search" id="sby" list="sbylist" placeholder="Type a name or tap one below" maxlength="50" value="${R.esc(sd.by || '')}"><datalist id="sbylist">${['Dr. Austin Cole'].concat(CARE_TEAM.map(m => m.name)).map(n => `<option value="${R.esc(n)}">`).join('')}</datalist>
+        <div class="quickpick" aria-label="Quick pick">${['Dr. Austin Cole'].concat(CARE_TEAM.map(m => m.name)).map(n => `<button type="button" class="qp" data-by="${R.esc(n)}">${R.esc(n)}</button>`).join('')}</div>
         <label class="f" for="sn">Athlete's first name (optional)</label><input class="search" id="sn" maxlength="40" placeholder="First name only">
         <label class="f" for="sp">Main protocol</label><select id="sp"><option value="">Choose...</option>${protoOpts}</select>
         <label class="f" for="sd">Surgery or start date</label><input type="date" id="sd">
@@ -455,6 +507,7 @@
     const addPt = (t, i) => { const div = document.createElement('div'); div.className = 'rowin'; div.innerHTML = `<input class="search pt-t" placeholder="Item (e.g. Heel slides 3x10)" maxlength="80" value="${R.esc(t || '')}"><input class="search pt-i" placeholder="Instructions (optional)" maxlength="400" value="${R.esc(i || '')}"><button class="btn danger sm">Remove</button>`; div.querySelector('button').onclick = () => div.remove(); $('ptl').appendChild(div); };
     const addAp = (a) => { const div = document.createElement('div'); div.className = 'rowin'; div.innerHTML = `<input type="date" class="ap-d" value="${R.esc((a && a[0]) || '')}"><input type="time" class="ap-m" value="${R.esc((a && a[1]) || '')}"><input class="search ap-t" placeholder="e.g. Follow-up visit" maxlength="60" value="${R.esc((a && a[2]) || '')}"><button class="btn danger sm">Remove</button>`; div.querySelector('button').onclick = () => div.remove(); $('apl').appendChild(div); };
     $('ptadd').onclick = () => { if ($('ptl').children.length < 10) addPt(); };
+    document.querySelectorAll('.qp').forEach(b => b.onclick = () => { $('sby').value = b.dataset.by; document.querySelectorAll('.qp').forEach(x => x.classList.toggle('on', x === b)); });
     $('apadd').onclick = () => { if ($('apl').children.length < 10) addAp(); };
     $('xf').oninput = () => { const q = $('xf').value.toLowerCase().trim(); $('xl').querySelectorAll('.xi').forEach(l => l.hidden = q && !l.dataset.t.includes(q)); };
     const sb = $('sb'); if (sb) sb.onchange = () => { const b = bundles[+sb.value]; if (!b) return; $('sp').value = b.p || ''; $('xl').querySelectorAll('input').forEach(c => c.checked = (b.x || []).includes(c.value)); $('ptl').innerHTML = ''; (b.t || []).forEach(t => addPt(t[0], t[1])); };
