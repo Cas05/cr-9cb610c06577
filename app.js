@@ -1,7 +1,7 @@
 /* Rehab Protocol Companion - prototype. Plain JS, no backend. All personal data stays in localStorage. */
 (function () {
   'use strict';
-  const DISCLAIMER = "Educational reference from Dr. Cole's protocols. Follow your surgeon's and therapist's instructions. Not medical advice.";
+  const DISCLAIMER = "Educational reference from your rehab protocol. Follow your surgeon's and therapist's instructions. Not medical advice.";
   const PLAN_KEY = 'rehabProto.plan';
   const CHECK_KEY = 'rehabProto.checks';
   let DATA = null, BY_ID = {};
@@ -39,7 +39,7 @@
         <div class="grid">${body.map(c => tile(c, count(c))).join('')}</div>
         <h2 class="sect">Programs</h2>
         <div class="grid">${special.map(c => tile(c, count(c))).join('')}</div>
-        <p class="count">${DATA.docs.length} documents from Dr. Cole's public protocols page. <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Source page</a></p>
+        <p class="count">${DATA.docs.length} surgery recovery protocols. <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Source page</a></p>
       </div>`;
   }
   function wireBrowse() {
@@ -53,7 +53,7 @@
     V5.wireHome();
   }
   function browse() {
-    setTitle('Protocols'); navActive('protocols'); head('Protocols', `Search or browse all ${DATA.docs.length} documents from Dr. Cole's protocols page.`, "Explore Dr. Cole's protocols");
+    setTitle('Protocols'); navActive('protocols'); head('Protocols', `Search or browse all ${DATA.docs.length} rehab protocols.`, 'Explore protocols');
     main.innerHTML = browseHtml();
     wireBrowse();
   }
@@ -82,7 +82,7 @@
     setTitle(c); navActive('protocols'); head(c, `${DATA.docs.filter(d => d.category === c).length} documents`, 'Protocols');
     const docs = DATA.docs.filter(d => d.category === c);
     main.innerHTML = `<p class="crumb"><a href="#/protocols">Protocols</a> / ${esc(c)}</p>
-      <p class="note">Titles and grouping are as listed on Dr. Cole's protocols page.</p>${listHtml(docs, false)}`;
+      <p class="note">Titles and grouping are as listed on the source protocols page.</p>${listHtml(docs, false)}`;
   }
 
   // ---------------- Protocol detail ----------------
@@ -159,7 +159,7 @@
   // ---------------- My plan ----------------
   function todayKey() { const n = new Date(); return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'); }
   function plan() {
-    setTitle('My plan'); navActive('plan'); head('My recovery plan', "Your protocol from Dr. Cole, step by step.");
+    setTitle('My plan'); navActive('plan'); head('My recovery plan', "Your protocol, step by step.");
     const p = store.get(PLAN_KEY, null), d = p && BY_ID[p.id];
     const opts = DATA.categories.map(c => `<optgroup label="${esc(c)}">${DATA.docs.filter(x => x.category === c).map(x => `<option value="${x.id}" ${p && p.id === x.id ? 'selected' : ''}>${esc(x.title)}</option>`).join('')}</optgroup>`).join('');
     const setup = `<details class="card setup" ${d ? '' : 'open'}><summary>${d ? 'Change my plan' : 'Set up my own plan'}</summary>
@@ -170,7 +170,7 @@
         <input type="date" id="pd" value="${p && p.date ? esc(p.date) : ''}">
         <div class="btns"><button class="btn" id="save">Save</button>${p ? '<button class="btn danger" id="clear">Clear my plan</button>' : ''}</div>
       </details>`;
-    const browseCard = `<a class="card linkrow" href="#/browse">${V5.icon('book', 'tile-ic')}<span><strong>Browse all protocols</strong><small>${DATA.docs.length} documents from Dr. Cole's protocols page</small></span>${V5.icon('chev', 'chev')}</a>`;
+    const browseCard = `<a class="card linkrow" href="#/browse">${V5.icon('book', 'tile-ic')}<span><strong>Browse all protocols</strong><small>${DATA.docs.length} rehab protocols</small></span>${V5.icon('chev', 'chev')}</a>`;
     let html;
     if (!d) {
       html = `<section class="summary"><div class="sum-eyebrow">No active protocol</div><h2>Set up your plan</h2><p>Use the code or link from your care team, or pick your protocol and surgery date below.</p><div class="sum-actions"><button class="sum-link" id="demo2">Try a demo plan ${V5.icon('chev')}</button></div></section>
@@ -376,7 +376,7 @@
   function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
   function about() {
-    setTitle('About'); navActive('about'); head('About this app', "Dr. Cole's rehab protocols, one day at a time.", 'COSMC Sports Medicine');
+    setTitle('About'); navActive('about'); head('About this app', 'Rehab protocols, one day at a time.', 'COSMC Sports Medicine');
     const flagged = DATA.docs.filter(d => (d.issues || []).length).length;
     const count = c => DATA.docs.filter(d => d.category === c).length;
     const cats = BODY_ORDER.filter(c => DATA.categories.includes(c)).concat(DATA.categories.filter(c => !BODY_ORDER.includes(c) && !/return-to-sport/i.test(c)));
@@ -385,7 +385,7 @@
     main.innerHTML = `<div class="card">
         <div class="ah-logo"><img src="cosmc-logo.png" alt="COSMC" width="180" height="35"></div>
         <h3 class="ah-h">Built for the road back</h3>
-        <p>This app turns the documents linked from Dr. Austin Cole's public protocols page into a phone-friendly plan: your phase, a daily checklist, your Road to Return and your calendar. Text is extracted automatically from each document and lightly formatted. Wording is not rewritten.</p>
+        <p>This app turns publicly posted surgery recovery protocols into a phone-friendly plan: your phase, a daily checklist, your Road to Return and your calendar. Text is extracted automatically from each document and lightly formatted. Wording is not rewritten.</p>
         <p class="note">${DATA.docs.length} documents are included; ${flagged} have notes asking you to check the original (pictures, tables or scanned pages). Every protocol page links to its original document.</p></div>
       <div class="card alist"><div class="cardhead"><h3>Protocols</h3></div>
         ${cats.map(c => `<a class="minirow" href="#/c/${slug(c)}">${V5.icon(V5.catIcon(c), 'mini-ic')}<span>${esc(c)} <small>${count(c)}</small></span>${V5.icon('chev', 'chev')}</a>`).join('')}
@@ -405,12 +405,12 @@
       <div class="card safety"><div class="cardhead"><h3>${V5.icon('alert')} Important safety information</h3></div>
         <p>This app does not diagnose or treat, and it does not replace your care team. ${esc(DISCLAIMER)}</p>
         <p><strong>If something feels wrong, call your care team. In an emergency, call 911.</strong></p></div>
-      <p class="note center">Demo: not approved by Dr. Cole or Conway Regional. Built ${esc(DATA.generated)} from <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Dr. Cole's protocols page</a>.</p>`;
+      <p class="note center">Demo: not approved by Dr. Cole or Conway Regional. Built ${esc(DATA.generated)} from <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Source page</a>.</p>`;
     document.getElementById('reset').onclick = () => {
       if (!confirm('Remove your plan, checkmarks, appointments and saved staff bundles from this browser?')) return;
       [localStorage, sessionStorage].forEach(st => { try { Object.keys(st).filter(k => k.startsWith('rehabProto.')).forEach(k => st.removeItem(k)); } catch (e) {} });
       document.getElementById('resetmsg').textContent = 'Done. All data from this app was removed from this browser.';
-      head('About this app', "Dr. Cole's rehab protocols, one day at a time.", 'COSMC Sports Medicine');
+      head('About this app', 'Rehab protocols, one day at a time.', 'COSMC Sports Medicine');
     };
   }
   function notFound() { head('Not found'); main.innerHTML = '<div class="card"><p>That page was not found.</p><p><a href="#/">Back to home</a></p></div>'; }

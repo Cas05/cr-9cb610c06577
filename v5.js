@@ -167,7 +167,7 @@
   // ---------- Home top (Today) ----------
   V5.homeTop = function () {
     const p = getPlan();
-    if (!p) { setHead('Welcome, athlete!', "Dr. Cole's rehab protocols, made simple.", 'COSMC Sports Medicine'); return welcome(); }
+    if (!p) { setHead('Welcome, athlete!', 'Rehab protocols, made simple.', 'COSMC Sports Medicine'); return welcome(); }
     setHead(p.name ? `Hello, ${p.name}!` : 'Hello!', "Here's where you are and what to do today.");
     return todayHtml(p);
   };
@@ -189,7 +189,7 @@
     return `<section class="summary hero-empty">${heroArt}
         <div class="sum-eyebrow">COSMC Sports Medicine</div>
         <h2>Your comeback<br>starts here.</h2>
-        <p>Dr. Cole's rehab protocol, one day at a time. See your phase, what to do today and what's next.</p>
+        <p>Follow your protocol one day at a time. See your phase, what to do today and what's next.</p>
         <div class="sum-actions"><button class="sum-btn" id="gocode">Enter plan code</button><a class="sum-link" href="#/plan">Build my own plan ${icon('chev')}</a></div>
       </section>
       ${V5.codeCardHtml('Enter plan code')}
@@ -210,7 +210,7 @@
         <p>Pick your protocol and surgery date yourself. You can switch to your care team's plan any time.</p>
         <div class="btns"><a class="btn" href="#/plan">Build my own plan</a><button class="btn secondary" id="demo">Try a demo plan</button></div></div>
       <div class="quicklinks">
-        <a class="card linkrow" href="#/protocols">${icon('book', 'tile-ic')}<span><strong>Protocols</strong><small>Search or browse Dr. Cole's protocols</small></span>${icon('chev', 'chev')}</a>
+        <a class="card linkrow" href="#/protocols">${icon('book', 'tile-ic')}<span><strong>Protocols</strong><small>Search or browse surgery recovery protocols</small></span>${icon('chev', 'chev')}</a>
         <a class="card linkrow" href="#/staff">${icon('team', 'tile-ic')}<span><strong>Care team</strong><small>${R.esc(team.join(', '))}</small></span>${icon('chev', 'chev')}</a>
       </div>
       <div class="callcard">${icon('alert', 'cc-ic')}<div class="cc-body"><strong>Safety first</strong>
@@ -227,7 +227,7 @@
     let h = `<section class="summary">${p.demo ? '<span class="demo-tag">Demo plan</span>' : ''}
       <div class="sum-top"><div class="sum-main"><div class="sum-eyebrow">${eyebrow}</div>
         <h2>${R.esc(ci >= 0 ? V5.phaseLabel(I) : d.title)}</h2>
-        <p>${ci >= 0 ? R.esc(d.title) + ' · ' : ''}${by ? 'Assigned by ' + by : "Dr. Cole's protocol"}</p></div>${pct}</div>
+        <p>${ci >= 0 ? R.esc(d.title) + ' · ' : ''}${by ? 'Assigned by ' + by : 'Your rehab protocol'}</p></div>${pct}</div>
       <div class="sum-actions">${unlocked ? `<button class="sum-pill" id="seen" data-ci="${ci}" aria-label="New phase unlocked. Dismiss">${icon('plus')} New phase unlocked</button>` : ''}<a class="sum-link" href="#/p/${d.id}">View full protocol ${icon('chev')}</a></div>
     </section>`;
     if (!p.date) return h + `<div class="card"><p>Add your surgery or start date on <a href="#/plan">My plan</a> to see your timeline.</p></div>` + extrasHtml(p) + apptRow(p) + contactHtml(p);
@@ -442,17 +442,17 @@
   // ---------- Care team (athlete-facing; only people we actually know) ----------
   // COSMC Sports Medicine care team shown on the Staff tab. Add a role later, e.g. { name: 'Sloane', role: '...' }.
   const CARE_TEAM = V5.CARE_TEAM = [
-    { name: 'Dr. Roberts', role: '' },
-    { name: 'Sloane', role: '' },
-    { name: 'Melanie', role: '' },
-    { name: 'Emily', role: '' }
+    { name: 'Dr. Tom Roberts', role: 'Non-operative Sports Medicine Physician' },
+    { name: 'Sloane Precure', role: 'Physician Assistant to Dr. Cole (clinic and surgery)' },
+    { name: 'Melanie', role: 'Sports Medicine Nurse Navigator' },
+    { name: 'Emily', role: "Dr. Cole's clinic assistant" }
   ];
-  const teamInitial = n => (String(n).replace(/^dr\.?\s+/i, '').trim()[0] || '?').toUpperCase();
+  const teamInitial = n => String(n).replace(/^dr\.?\s+/i, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
   function careTeamHtml() {
     const p = getPlan(), ph = p ? phoneDigits(p.phone) : '';
     const initials = s => String(s).replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
     let h = `<div class="card person-card"><div class="person"><span class="avatar">AC</span><span><strong>Dr. Austin Cole, MD</strong><small>Orthopedic Surgeon</small></span></div>
-      <p class="note">The protocols in this app come from Dr. Cole's protocols page.</p><a class="minirow" href="#/protocols">${icon('book', 'mini-ic')}<span>Browse Dr. Cole's protocols</span>${icon('chev', 'chev')}</a></div>`;
+      <a class="minirow" href="#/protocols">${icon('book', 'mini-ic')}<span>Browse protocols</span>${icon('chev', 'chev')}</a></div>`;
     h += `<div class="card"><div class="cardhead"><h3>COSMC Sports Medicine care team</h3></div>
       <ul class="teamlist">${CARE_TEAM.map(m => `<li><span class="avatar sm">${R.esc(teamInitial(m.name))}</span><span><strong>${R.esc(m.name)}</strong><small>${R.esc(m.role || 'COSMC Sports Medicine care team')}</small></span></li>`).join('')}</ul></div>`;
     if (p && p.by) h += `<div class="card person-card"><div class="person"><span class="avatar alt">${R.esc(initials(p.by))}</span><span><strong>${R.esc(p.by)}</strong><small>Assigned your plan</small></span></div>
