@@ -61,11 +61,20 @@
     team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6M17 4.5a3.5 3.5 0 0 1 0 7M21.5 20c0-2.6-1.6-4.6-4-5.5"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
     check: '<path d="M5 12l5 5 9-10"/>',
-    flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>'
+    flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>',
+    sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+    arrowl: '<path d="M15 6l-6 6 6 6"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>'
   };
   const icon = V5.icon = (n, cls) => `<svg class="ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ICONS.info}</svg>`;
   V5.catIcon = c => /return-to-sport/i.test(c || '') ? 'run' : (/home exercise/i.test(c || '') ? 'dumbbell' : 'joint');
-  const setHead = t => { const h = $('htitle'); if (h) h.textContent = t; };
+  const setHead = (t, sub, eb) => {
+    const h = $('htitle'); if (h) h.textContent = t;
+    const s = $('hsub'); if (s) { s.textContent = sub || ''; s.hidden = !sub; }
+    const e = $('heyebrow'); if (e) e.textContent = eb || 'Your recovery';
+    const av = $('havatar'); if (av) { const p = getPlan(), n = p && p.name ? String(p.name).trim().charAt(0).toUpperCase() : ''; av.innerHTML = n ? R.esc(n) : icon('user'); av.title = 'My plan'; }
+  };
   V5.setHead = setHead;
   const shortPh = V5.shortPh = t => {
     let s = String(t || '').replace(/^phase\s*[ivx\d]+\s*[–\-:.]*\s*/i, '').trim();
@@ -91,20 +100,20 @@
   V5.phaseLabel = (I) => I.ci >= 0 ? `Phase ${I.ci + 1}: ${shortPh(I.ph[I.ci].s.title)}` : '';
   V5.roadHtml = function (d, p, I) {
     if (!I.steps.groups.length) return '';
-    const g = I.steps.groups, cur = I.steps.cur;
-    const fillPct = g.length > 1 ? Math.max(0, Math.min(100, (cur < 0 ? 0 : cur) / (g.length - 1) * 100)) : 0;
+    const g = I.steps.groups, cur = I.steps.cur, hasPct = !!(I.end && p.date && I.days != null);
     return `<div class="card road">
-      <div class="cardhead"><h3>Road to Return</h3>${I.end && p.date ? `<span class="muted-sm">~${I.pct}% complete</span>` : ''}</div>
-      <div class="stepper" style="--n:${g.length}"><div class="stline"><i style="width:${fillPct}%"></i></div>
-        ${g.map((x, k) => `<div class="step ${k < cur ? 'done' : (k === cur ? 'cur' : '')}"><span class="dot">${k < cur ? icon('check') : ''}</span><b>P${k + 1}</b><small>${R.esc(x.label)}</small></div>`).join('')}
-      </div>
+      <div class="cardhead"><h3>Road to Return</h3>${hasPct ? `<span class="road-pct">${I.pct}%</span>` : ''}</div>
+      <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${hasPct ? I.pct : 0}" aria-label="Progress through the written timeline"><i style="width:${hasPct ? Math.max(3, I.pct) : 0}%"></i></div>
+      <ol class="miles" style="--n:${g.length}">${g.map((x, k) => `<li class="${k < cur ? 'done' : (k === cur ? 'cur' : '')}" title="${R.esc(x.label)}"><span class="mdot">${k < cur ? icon('check') : ''}</span><span class="mlab">Phase ${k + 1}</span></li>`).join('')}</ol>
+      <div class="nownext">${cur >= 0 ? `<div><em class="eyebrow-sm">Now</em><span>${R.esc(g[cur].label)}</span></div>` : ''}${g[cur + 1] ? `<div><em class="eyebrow-sm nx">Next</em><span>${R.esc(g[cur + 1].label)}</span></div>` : ''}</div>
       ${I.end && I.days != null && I.days > I.end ? '<p class="note">You are past the end of the written timeline. Your care team decides when you are cleared.</p>' : ''}
     </div>`;
   };
   V5.codeCardHtml = function () {
-    return `<div class="card codecard"><div class="cardhead"><h3>Got a plan code?</h3></div>
-      <p class="note">Your care team can give you a link, QR code or a code that looks like CR-44-261001.</p>
-      <div class="codein"><input class="search" id="code" placeholder="CR-..." autocomplete="off" autocapitalize="characters" aria-label="Plan code"><button class="btn" id="usecode">Use code</button></div>
+    return `<div class="card codecard"><div class="cardhead"><h3>Enter a protocol code</h3></div>
+      <p class="note">Use the link, QR code or code from your care team. A code looks like CR-44-261001.</p>
+      <label class="f" for="code">Protocol code</label>
+      <div class="codein"><input class="search" id="code" placeholder="CR-..." autocomplete="off" autocapitalize="characters"><button class="btn" id="usecode">Use code</button></div>
       <p class="note" id="codemsg"></p></div>`;
   };
   V5.wireCode = function () {
@@ -123,36 +132,67 @@
     R.store.get(APPT_KEY, []).forEach((a, i) => out.push({ d: a.d, time: a.time, t: a.t, kind: 'own', i }));
     return out.sort((x, y) => (x.d + (x.time || '')).localeCompare(y.d + (y.time || '')));
   }
+  function calModel(p) {
+    const own = R.store.get(APPT_KEY, []), d = p && R.BY_ID[p.id], ph = d ? phases(d) : [], end = d ? roadEnd(ph) : null;
+    const dayNum = k => p && p.date ? Math.round((parseKey(k) - parseKey(p.date)) / 86400000) : null;
+    function events(k) {
+      const ev = [];
+      if (p && p.date) {
+        if (k === p.date) ev.push({ t: 'Surgery day', kind: 'ms' });
+        ph.forEach((x, i) => { if (x.a > 0 && addDays(p.date, x.a) === k) ev.push({ t: `Phase ${i + 1} starts: ${shortPh(x.s.title)}`, kind: 'ms' }); });
+        (p.appts || []).forEach(a => { if (a[0] === k) ev.push({ t: a[2] || 'Appointment', time: a[1], kind: 'care' }); });
+      }
+      own.forEach((a, i) => { if (a.d === k) ev.push({ t: a.t, time: a.time, kind: 'own', i }); });
+      return ev.sort((x, y) => (x.time || '').localeCompare(y.time || ''));
+    }
+    const isEx = k => { const n = dayNum(k); return n != null && end != null && n >= 1 && n <= end; };
+    const dots = k => { const ev = events(k), o = []; if (isEx(k)) o.push('ex'); if (ev.some(e => e.kind !== 'ms')) o.push('appt'); if (ev.some(e => e.kind === 'ms')) o.push('ms'); return o; };
+    return { own, d, ph, end, dayNum, events, isEx, dots };
+  }
+  const monday = k => { const dt = parseKey(k); return addDays(k, -((dt.getDay() + 6) % 7)); };
+  function weekStrip(M, wk, sel, todayK) {
+    let c = '';
+    for (let i = 0; i < 7; i++) {
+      const k = addDays(wk, i), dt = parseKey(k);
+      c += `<button class="wd ${k === sel ? 'sel' : ''} ${k === todayK ? 'today' : ''}" data-wk="${k}" aria-pressed="${k === sel}" aria-label="${R.esc(nice(k, true))}"><small>${dt.toLocaleDateString(undefined, { weekday: 'short' })}</small><b>${dt.getDate()}</b><span class="mdots">${M.dots(k).map(x => `<i class="${x}"></i>`).join('')}</span></button>`;
+    }
+    return `<div class="week">${c}</div>`;
+  }
+  const weekTitle = (wk, todayK) => wk === monday(todayK) ? 'This week' : 'Week of ' + parseKey(wk).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const legendHtml = '<div class="legend"><span><i class="ex"></i>Exercise day</span><span><i class="appt"></i>Appointment</span><span><i class="ms"></i>Milestone</span></div>';
+  const upLabel = a => (parseKey(a.d).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) + (a.time ? ' · ' + timeNice(a.time) : '')).toUpperCase();
   V5.nextAppt = p => allAppts(p).find(a => a.d >= keyOf(new Date())) || null;
   V5.apptWhen = a => nice(a.d, true) + (a.time ? ' · ' + timeNice(a.time) : '');
 
   // ---------- Home top (Today) ----------
   V5.homeTop = function () {
     const p = getPlan();
-    if (!p) { setHead('Welcome!'); return welcome(); }
-    setHead(p.name ? `Hello, ${p.name}!` : 'Hello!');
+    if (!p) { setHead('Welcome!', "Dr. Cole's rehab protocols, on your phone."); return welcome(); }
+    setHead(p.name ? `Hello, ${p.name}!` : 'Hello!', "Here's where you are and what to do today.");
     return todayHtml(p);
   };
   function welcome() {
-    return `<div class="card hero-lite"><div class="pc-icon">${icon('run')}</div><div><h2>Your recovery, like a pro.</h2><p class="note">Follow Dr. Cole's protocol one day at a time. Your plan stays on this phone.</p></div></div>
-      ${V5.codeCardHtml()}
-      <div class="card linkrow"><a href="#/plan">${icon('dumbbell', 'tile-ic')}<span><strong>Set up my own plan</strong><small>Pick your protocol and surgery date</small></span>${icon('chev', 'chev')}</a></div>`;
+    return `<section class="summary welcome"><div class="sum-eyebrow">COSMC Sports Medicine</div><h2>Start your recovery plan</h2>
+        <p>Follow Dr. Cole's protocol one day at a time: your phase, today's exercises and what's next. Your plan stays on this phone.</p>
+        <div class="sum-actions"><a class="sum-btn" href="#/plan">Set up my plan</a><button class="sum-link" id="demo">Try a demo plan ${icon('chev')}</button></div></section>
+      ${V5.codeCardHtml()}`;
   }
   function todayHtml(p) {
     const d = R.BY_ID[p.id], I = V5.planInfo(d, p), days = I.days, ph = I.ph, ci = I.ci;
     const by = p.by ? R.esc(p.by) : '';
-    let h = `<div class="card protocard"><div class="pc-icon">${icon(V5.catIcon(d.category))}</div><div class="pc-body">
-      <h2>${R.esc(d.title)}</h2>
-      <div class="pc-sub">${!p.date ? 'Add your surgery or start date in My plan' : (days < 0 ? `${-days} day${days === -1 ? '' : 's'} until surgery` : `Day ${days} &middot; Week ${Math.floor(days / 7) + 1} of recovery`)}</div>
-      ${ci >= 0 ? `<span class="pill">${R.esc(V5.phaseLabel(I))}</span>` : ''}
-      ${by ? `<div class="pc-by">${icon('user')} Plan assigned by <strong>${by}</strong></div>` : ''}
-    </div></div>`;
+    const seen = R.store.get(SEEN_KEY, {});
+    const unlocked = p.date && ci >= 0 && ci > (seen[p.id + '|' + p.date] ?? -1) && days > 0;
+    const eyebrow = !p.date ? 'No surgery date yet' : (days < 0 ? `${-days} day${days === -1 ? '' : 's'} until surgery` : `Day ${days} · Week ${Math.floor(days / 7) + 1} of recovery`);
+    const pct = p.date && I.end && days >= 0 ? `<div class="sum-pct"><b>${I.pct}%</b><small>of the written timeline</small></div>` : '';
+    let h = `<section class="summary">${p.demo ? '<span class="demo-tag">Demo plan</span>' : ''}
+      <div class="sum-top"><div class="sum-main"><div class="sum-eyebrow">${eyebrow}</div>
+        <h2>${R.esc(ci >= 0 ? V5.phaseLabel(I) : d.title)}</h2>
+        <p>${ci >= 0 ? R.esc(d.title) + ' · ' : ''}${by ? 'Assigned by ' + by : "Dr. Cole's protocol"}</p></div>${pct}</div>
+      <div class="sum-actions">${unlocked ? `<button class="sum-pill" id="seen" data-ci="${ci}" aria-label="New phase unlocked. Dismiss">${icon('plus')} New phase unlocked</button>` : ''}<a class="sum-link" href="#/p/${d.id}">View full protocol ${icon('chev')}</a></div>
+    </section>`;
     if (!p.date) return h + `<div class="card"><p>Add your surgery or start date on <a href="#/plan">My plan</a> to see your timeline.</p></div>` + extrasHtml(p) + apptRow(p) + contactHtml(p);
     h += V5.roadHtml(d, p, I);
-    const seen = R.store.get(SEEN_KEY, {});
-    if (ci >= 0 && ci > (seen[p.id + '|' + p.date] ?? -1) && days > 0) {
-      h += `<div class="unlock" role="status">${icon('trophy', 'un-ic')}<div class="un-body"><strong>New phase unlocked!</strong><div>You're now in ${R.esc(V5.phaseLabel(I))}.</div><small>Your care team decides when you are cleared to move on.</small></div><button class="btn sm ghost" id="seen" data-ci="${ci}" aria-label="Dismiss">Got it</button></div>`;
-    }
+    h += `<div class="card weekcard" id="homeweek"></div>`;
     if (days < 0) {
       const pre = R.BY_ID['knee-arthroplasty-prehab-exercises-148'];
       h += `<div class="card"><div class="cardhead"><h3>Before surgery</h3></div><p>${-days} day${days === -1 ? '' : 's'} to go (${R.esc(nice(p.date))}).</p>${pre && /arthroplasty/i.test(d.title) ? `<p><a href="#/p/${pre.id}">Open your prehab exercises</a></p>` : ''}</div>`;
@@ -160,10 +200,10 @@
       const s = ph[ci].s, day = R.todayKey(), checks = R.store.get(CHECK_KEY, {}); let rows = '', n = 0, done = 0;
       const F = focusItems(s, days);
       F.items.forEach(x => { const key = `${d.id}|today|${ph[ci].i}|${x.j}|${day}`; n++; if (checks[key]) done++; rows += R.ckRow(key, x.t, checks, 0); });
-      h += `<div class="card focus"><div class="cardhead"><h3>${icon('check', 'h-ic')} Today's Focus</h3><span class="muted-sm" id="tcount">${done} of ${n} done</span></div>${F.label ? `<div class="check-label">${R.esc(F.label)}</div>` : ''}${rows}<p class="note">${F.partial ? 'Exercise items from your protocol for this week. <a href="#/plan">See the full phase</a>.' : 'From your protocol\'s current phase.'} Ticks reset each day.</p></div>`;
+      h += `<div class="card focus"><div class="cardhead"><h3>Today's focus</h3><span class="badge-soft" id="tcount">${done}/${n} done</span></div>${F.label ? `<div class="eyebrow-sm">${R.esc(F.label)}</div>` : ''}<div class="boxlist">${rows}</div><p class="note">${F.partial ? 'Exercise items from your protocol for this week. <a href="#/plan">See the whole phase</a>.' : 'From your protocol\'s current phase.'} Ticks reset each day.</p></div>`;
     }
     h += extrasHtml(p) + apptRow(p) + contactHtml(p);
-    if (days >= 0) h += `<button class="btn outline block" id="skip">${icon('pause')} It hurts, skip today</button><div id="skipmsg"></div>`;
+    if (days >= 0) h += `<button class="btn outline block" id="skip">${icon('pause')} It hurts - skip today</button><div id="skipmsg"></div>`;
     return h;
   }
   // Today's Focus: the exercise items of the week block that contains today (as written), falling back to the whole phase.
@@ -189,18 +229,19 @@
   }
   function apptRow(p) {
     const a = V5.nextAppt(p);
-    return `<a class="card apptrow" href="#/calendar">${icon('cal', 'tile-ic')}<span><strong>Upcoming Appointment</strong><small>${a ? R.esc(a.t) + ', ' + R.esc(V5.apptWhen(a)) : 'Nothing scheduled yet'}</small></span>${icon('chev', 'chev')}</a>`;
+    return `<a class="card uprow" href="#/calendar"><span class="up-ic">${icon('cal')}</span><span><em class="eyebrow-sm">${a ? R.esc(upLabel(a)) : 'Coming up'}</em><strong>${a ? R.esc(a.t) : 'No appointments yet'}</strong><small>${a ? (a.kind === 'care' ? 'From your care team' : 'Added by you') : 'Appointments from your care team show here'}</small></span>${icon('chev', 'chev')}</a>`;
   }
   function extrasHtml(p) {
     let h = '';
     const by = p.by ? R.esc(p.by) : 'your care team';
     if (p.pt && p.pt.length) {
       const checks = R.store.get(CHECK_KEY, {}), day = R.todayKey();
-      h += `<div class="fromcard"><div class="fc-head">${icon('chat')} <strong>From ${by}:</strong></div>${p.pt.map((x, j) => `<div class="ptitem">${R.ckRow(`${p.id}|pt|${j}|${day}`, x[0], checks)}${x[1] ? `<div class="ptnote">${R.esc(x[1])}</div>` : ''}</div>`).join('')}</div>`;
+      h += `<div class="card guide"><div class="cardhead"><h3>From ${by}</h3><span class="badge-soft">${icon('chat')} Care team</span></div><div class="boxlist">${p.pt.map((x, j) => `<div class="ptitem">${R.ckRow(`${p.id}|pt|${j}|${day}`, x[0], checks)}${x[1] ? `<div class="ptnote">${R.esc(x[1])}</div>` : ''}</div>`).join('')}</div></div>`;
     }
     if (p.extras && p.extras.length) h += `<div class="card"><div class="cardhead"><h3>Also assigned by ${by}</h3></div>${p.extras.map(id => R.BY_ID[id]).filter(Boolean).map(x => `<a class="minirow" href="#/p/${x.id}">${icon(V5.catIcon(x.category), 'mini-ic')}<span>${R.esc(x.title)}</span>${icon('chev', 'chev')}</a>`).join('')}</div>`;
     return h;
   }
+  V5.extrasHtml = extrasHtml;
   function contactHtml(p) {
     const ph = phoneDigits(p.phone);
     return `<div class="callcard">${icon('alert', 'cc-ic')}<div class="cc-body"><strong>When to call us</strong>
@@ -210,17 +251,36 @@
   }
   V5.wireHome = function () {
     V5.wireCode();
+    const dm = $('demo'); if (dm) dm.onclick = loadDemo;
     const p = getPlan();
     if (!p) return;
-    const sn = $('seen'); if (sn) sn.onclick = () => { const s = R.store.get(SEEN_KEY, {}); s[p.id + '|' + p.date] = +sn.dataset.ci; R.store.set(SEEN_KEY, s); sn.closest('.unlock').remove(); };
+    const hw = $('homeweek');
+    if (hw) {
+      const M = calModel(p), t = keyOf(new Date()); let wk = monday(t);
+      const draw = () => {
+        hw.innerHTML = `<div class="cardhead"><h3>${R.esc(weekTitle(wk, t))}</h3><span class="arrows"><button class="iconbtn" data-w="-7" aria-label="Previous week">${icon('arrowl')}</button><button class="iconbtn" data-w="7" aria-label="Next week">${icon('chev')}</button></span></div>${weekStrip(M, wk, t, t)}`;
+        hw.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { wk = addDays(wk, +b.dataset.w); draw(); });
+        hw.querySelectorAll('[data-wk]').forEach(b => b.onclick = () => { sessionStorage.setItem('rehabProto.calsel', b.dataset.wk); location.hash = '#/calendar'; });
+      };
+      draw();
+    }
+    const sn = $('seen'); if (sn) sn.onclick = () => { const s = R.store.get(SEEN_KEY, {}); s[p.id + '|' + p.date] = +sn.dataset.ci; R.store.set(SEEN_KEY, s); sn.remove(); };
     const sk = $('skip'); if (sk) sk.onclick = () => { const ph = phoneDigits(p.phone); $('skipmsg').innerHTML = `<div class="disclaimer">Skipping today is okay. Do not push through pain. If it keeps hurting, contact your care team.${ph ? ` <a href="tel:${R.esc(ph)}">Call the office</a>` : ''}</div>`; };
     main().querySelectorAll('input[data-ck]').forEach(cb => cb.onchange = () => {
       const all = R.store.get(CHECK_KEY, {}); const k = cb.dataset.ck; if (cb.checked) all[k] = 1; else delete all[k];
       R.store.set(CHECK_KEY, all); cb.closest('.check').classList.toggle('done', cb.checked);
-      const t = $('tcount'); if (t) { const boxes = [...main().querySelectorAll('input[data-ck*="|today|"]')]; t.textContent = `${boxes.filter(b => b.checked).length} of ${boxes.length} done`; }
+      const t = $('tcount'); if (t) { const boxes = [...main().querySelectorAll('input[data-ck*="|today|"]')]; t.textContent = `${boxes.filter(b => b.checked).length}/${boxes.length} done`; }
     });
   };
   const main = () => document.getElementById('main');
+  // Demo plan: fictional, clearly labeled, no phone number. Removed with "Reset" on About or "Clear my plan".
+  function loadDemo() {
+    const doc = R.BY_ID['acl-reconstruction-44'] || R.DATA.docs.find(x => phases(x).length >= 3);
+    const t = keyOf(new Date());
+    R.store.set(PLAN_KEY, { id: doc.id, date: addDays(t, -36), sel: null, name: '', by: 'Demo care team', demo: true, extras: [], pt: [['Demo item from your care team', 'Fictional example: instructions your therapist adds show here.']], appts: [[addDays(t, 2), '15:30', 'Demo: therapy visit']], phone: '', callnote: '' });
+    if (location.hash === '' || location.hash === '#/' || location.hash === '#') R.route(); else location.hash = '#/';
+  }
+  V5.loadDemo = loadDemo;
 
   // ---------- ICS ----------
   const icsEsc = s => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
@@ -243,83 +303,75 @@
 
   // ---------- Calendar (v7: month grid + segments) ----------
   V5.routes.calendar = function () {
-    R.setTitle('Calendar'); R.navActive('calendar'); setHead('Calendar');
+    R.setTitle('Calendar'); R.navActive('calendar'); setHead('Recovery calendar', 'Your phases, appointments and exercise days.');
     const p = getPlan(), todayK = keyOf(new Date());
     let sel = sessionStorage.getItem('rehabProto.calsel') || todayK;
     if (!validDate(sel)) sel = todayK;
-    let seg = sessionStorage.getItem('rehabProto.calseg') || 'schedule';
-    const own = R.store.get(APPT_KEY, []);
-    const d = p && R.BY_ID[p.id], ph = d ? phases(d) : [], end = d ? roadEnd(ph) : null;
-    const dayNum = k => p && p.date ? Math.round((parseKey(k) - parseKey(p.date)) / 86400000) : null;
-    function events(k) {
-      const ev = [];
-      if (p && p.date) {
-        if (k === p.date) ev.push({ t: 'Surgery day', kind: 'ms' });
-        ph.forEach((x, i) => { if (x.a > 0 && addDays(p.date, x.a) === k) ev.push({ t: `Phase ${i + 1} starts: ${shortPh(x.s.title)}`, kind: 'ms' }); });
-        (p.appts || []).forEach(a => { if (a[0] === k) ev.push({ t: a[2] || 'Appointment', time: a[1], kind: 'care' }); });
-      }
-      own.forEach((a, i) => { if (a.d === k) ev.push({ t: a.t, time: a.time, kind: 'own', i }); });
-      return ev.sort((x, y) => (x.time || '').localeCompare(y.time || ''));
-    }
-    const isEx = k => { const n = dayNum(k); return n != null && end != null && n >= 1 && n <= end; };
-    function dots(k) {
-      const ev = events(k), out = [];
-      if (seg !== 'appointments' && isEx(k)) out.push('ex');
-      if (seg !== 'tasks' && ev.some(e => e.kind === 'care' || e.kind === 'own')) out.push('appt');
-      if (seg === 'schedule' && ev.some(e => e.kind === 'ms')) out.push('ms');
-      return out;
-    }
+    let view = sessionStorage.getItem('rehabProto.calview') || 'week';
+    const M = calModel(p), own = M.own, ph = M.ph;
     function upcoming(limit) {
       const out = []; let k = todayK;
-      for (let i = 0; i < 400 && out.length < limit; i++, k = addDays(k, 1)) events(k).forEach(e => { if (seg === 'appointments' && e.kind === 'ms') return; out.push(Object.assign({ d: k }, e)); });
+      for (let i = 0; i < 400 && out.length < limit; i++, k = addDays(k, 1)) M.events(k).forEach(e => out.push(Object.assign({ d: k }, e)));
       return out.slice(0, limit);
+    }
+    function weekGoals() {
+      if (!p || !p.date || M.end == null) return '';
+      const checks = R.store.get(CHECK_KEY, {}), wk = monday(todayK), daysT = new Set(); let todayN = 0;
+      Object.keys(checks).forEach(k => { if (!(k.startsWith(p.id + '|'))) return; const dk = k.split('|').pop(); if (dk >= wk && dk <= addDays(wk, 6)) daysT.add(dk); if (dk === todayK) todayN++; });
+      return `<div class="card"><div class="cardhead"><h3>Weekly goals</h3></div>
+        <p>Do the exercises your protocol lists for this phase, as tolerated, and follow your care team's instructions.</p>
+        <div class="chips"><span class="badge-soft">${daysT.size} of 7 days ticked this week</span><span class="badge-soft">${todayN} item${todayN === 1 ? '' : 's'} ticked today</span></div>
+        <div class="btns"><a class="btn sm" href="#/">Open today's focus</a></div></div>`;
     }
     function draw() {
       const base = parseKey(sel), first = new Date(base.getFullYear(), base.getMonth(), 1), last = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-      let cells = '';
-      for (let i = 0; i < first.getDay(); i++) cells += '<span class="mc empty"></span>';
-      for (let n = 1; n <= last.getDate(); n++) {
-        const k = keyOf(new Date(base.getFullYear(), base.getMonth(), n));
-        cells += `<button class="mc ${k === sel ? 'sel' : ''} ${k === todayK ? 'today' : ''}" data-k="${k}" aria-label="${R.esc(nice(k, true))}"><span class="mn">${n}</span><span class="mdots">${dots(k).map(c => `<i class="${c}"></i>`).join('')}</span></button>`;
-      }
-      const dn = dayNum(sel), ci = dn != null ? curPhase(ph, dn) : -1, ev = events(sel);
-      const segBtn = (id, label) => `<button role="tab" aria-selected="${seg === id}" class="${seg === id ? 'on' : ''}" data-seg="${id}">${label}</button>`;
-      let dayCard = `<div class="card"><div class="cardhead"><h3>${R.esc(nice(sel, true))}</h3></div>
-        ${dn != null ? `<p class="note">${dn < 0 ? -dn + ' day' + (dn === -1 ? '' : 's') + ' before surgery' : 'Day ' + dn + ' after surgery'}${ci >= 0 ? ' &middot; Phase ' + (ci + 1) + ': ' + R.esc(shortPh(ph[ci].s.title)) : ''}</p>` : '<p class="note">Add a surgery date on <a href="#/plan">My plan</a> to see your exercise days and phases.</p>'}`;
-      if (seg === 'tasks') {
-        dayCard += isEx(sel) ? `<div class="ev ex"><div><strong>Exercise plan</strong><div class="note">${ci >= 0 ? R.esc(shortPh(ph[ci].s.title)) + ' exercises from your protocol' : 'Your protocol exercises'}</div></div><a class="btn sm secondary" href="${sel === todayK ? '#/' : '#/plan'}">Open</a></div>` : '<p class="note">No exercise plan on this day.</p>';
-        if (p && p.pt && p.pt.length && isEx(sel)) dayCard += `<div class="ev ex"><div><strong>From ${R.esc(p.by || 'your care team')}</strong><div class="note">${p.pt.map(x => R.esc(x[0])).join(', ')}</div></div></div>`;
+      let cal;
+      if (view === 'month') {
+        let cells = '';
+        for (let i = 0; i < (first.getDay() + 6) % 7; i++) cells += '<span class="mc empty"></span>';
+        for (let n = 1; n <= last.getDate(); n++) {
+          const k = keyOf(new Date(base.getFullYear(), base.getMonth(), n));
+          cells += `<button class="mc ${k === sel ? 'sel' : ''} ${k === todayK ? 'today' : ''}" data-k="${k}" aria-label="${R.esc(nice(k, true))}"><span class="mn">${n}</span><span class="mdots">${M.dots(k).map(c => `<i class="${c}"></i>`).join('')}</span></button>`;
+        }
+        cal = `<div class="cardhead"><h3>${R.esc(first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))}</h3><span class="arrows"><button class="iconbtn" id="pm" aria-label="Previous month">${icon('arrowl')}</button><button class="iconbtn" id="nm" aria-label="Next month">${icon('chev')}</button></span></div>
+          <div class="mgrid mdow">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<span>${x}</span>`).join('')}</div><div class="mgrid">${cells}</div>`;
       } else {
-        const list = seg === 'appointments' ? ev.filter(e => e.kind !== 'ms') : ev;
-        dayCard += list.length ? list.map(e => `<div class="ev ${e.kind}"><div><strong>${R.esc(e.t)}</strong>${e.time ? ` <span class="note">${R.esc(timeNice(e.time))}</span>` : ''}${e.kind === 'care' ? '<div class="note">From your care team</div>' : ''}</div>${e.kind === 'own' ? `<button class="btn danger sm" data-del="${e.i}">Remove</button>` : ''}</div>`).join('') : `<p class="note">${isEx(sel) && seg === 'schedule' ? 'Exercise day. ' : ''}Nothing else scheduled.</p>`;
-        dayCard += `<details class="addappt"><summary>+ Add your own appointment</summary>
-          <input class="search" id="at" placeholder="e.g. Therapy visit" maxlength="60" aria-label="Appointment name"><label class="f" for="atm">Time (optional)</label><input type="time" id="atm">
-          <div class="btns"><button class="btn" id="aadd">Add to ${R.esc(nice(sel))}</button></div><p class="note">Saved only on this device.</p></details>`;
+        const wk = monday(sel);
+        cal = `<div class="cardhead"><h3>${R.esc(weekTitle(wk, todayK))}</h3><span class="arrows"><button class="iconbtn" id="pm" aria-label="Previous week">${icon('arrowl')}</button><button class="iconbtn" id="nm" aria-label="Next week">${icon('chev')}</button></span></div>${weekStrip(M, wk, sel, todayK)}`;
       }
-      dayCard += '</div>';
-      const up = seg === 'tasks' ? [] : upcoming(seg === 'appointments' ? 20 : 5);
+      const dn = M.dayNum(sel), ci = dn != null ? curPhase(ph, dn) : -1, ev = M.events(sel);
+      let dayCard = `<div class="card"><div class="eyebrow-sm">${R.esc(nice(sel, true).toUpperCase())}${sel === todayK ? ' · TODAY' : ''}</div>
+        ${dn != null ? `<h3 class="dayh">${dn < 0 ? -dn + ' day' + (dn === -1 ? '' : 's') + ' before surgery' : 'Day ' + dn + ' after surgery'}</h3>${ci >= 0 ? `<p class="note">Phase ${ci + 1}: ${R.esc(shortPh(ph[ci].s.title))}</p>` : ''}` : '<p class="note">Add a surgery date on <a href="#/plan">My plan</a> to see your exercise days and phases.</p>'}
+        ${M.isEx(sel) ? `<div class="ev ex"><div><strong>Recovery exercises</strong><div class="note">Your assigned checklist</div></div><a class="btn sm secondary" href="${sel === todayK ? '#/' : '#/plan'}">Open</a></div>` : ''}
+        ${ev.map(e => `<div class="ev ${e.kind}"><div><strong>${R.esc(e.t)}</strong>${e.time ? ` <span class="note">${R.esc(timeNice(e.time))}</span>` : ''}<div class="note">${e.kind === 'care' ? 'From your care team' : (e.kind === 'own' ? 'Added by you' : 'Milestone')}</div></div>${e.kind === 'own' ? `<button class="btn danger sm" data-del="${e.i}">Remove</button>` : ''}</div>`).join('')}
+        ${!ev.length && !M.isEx(sel) ? '<p class="note">Nothing scheduled.</p>' : ''}
+        <details class="addappt"><summary>+ Add your own appointment</summary>
+          <input class="search" id="at" placeholder="e.g. Therapy visit" maxlength="60" aria-label="Appointment name"><label class="f" for="atm">Time (optional)</label><input type="time" id="atm">
+          <div class="btns"><button class="btn" id="aadd">Add to ${R.esc(nice(sel))}</button></div><p class="note">Saved only on this device.</p></details></div>`;
+      const up = upcoming(6), endK = p && p.date && M.end ? addDays(p.date, M.end) : null;
+      const daily = endK && todayK <= endK && todayK >= addDays(p.date, 1) ? `<a class="up" href="#/"><em class="eyebrow-sm">EVERY DAY</em><strong>Recovery exercises</strong><small>Your assigned checklist, through ${R.esc(nice(endK))} (estimate)</small></a>` : '';
       main().innerHTML = `
-        <div class="segs" role="tablist">${segBtn('schedule', 'Schedule')}${segBtn('tasks', 'Tasks')}${segBtn('appointments', 'Appointments')}</div>
-        <div class="card month">
-          <div class="mhead"><button class="iconbtn" id="pm" aria-label="Previous month">&lsaquo;</button><strong>${R.esc(first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))}</strong><button class="iconbtn" id="nm" aria-label="Next month">&rsaquo;</button></div>
-          <div class="mgrid mdow">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(x => `<span>${x}</span>`).join('')}</div>
-          <div class="mgrid">${cells}</div>
-          <div class="legend">${seg !== 'appointments' ? '<span><i class="ex"></i>Exercise plan</span>' : ''}${seg !== 'tasks' ? '<span><i class="appt"></i>Appointment</span>' : ''}${seg === 'schedule' ? '<span><i class="ms"></i>Milestone</span>' : ''}</div>
+        <div class="card calcard">
+          <div class="viewtog" role="tablist"><button role="tab" data-view="week" class="${view === 'week' ? 'on' : ''}" aria-selected="${view === 'week'}">Week</button><button role="tab" data-view="month" class="${view === 'month' ? 'on' : ''}" aria-selected="${view === 'month'}">Month</button></div>
+          ${cal}${legendHtml}
           ${sel !== todayK ? '<div class="btns center"><button class="btn sm secondary" id="atoday">Back to today</button></div>' : ''}
         </div>
         ${dayCard}
-        ${seg === 'tasks' ? '' : `<h2 class="sect">Upcoming</h2>${up.length ? up.map(e => `<button class="card uprow ${e.kind}" data-k="${e.d}">${icon(e.kind === 'ms' ? 'flag' : 'cal', 'tile-ic')}<span><strong>${R.esc(e.t)}</strong><small>${R.esc(nice(e.d, true))}${e.time ? ' · ' + R.esc(timeNice(e.time)) : ''}</small></span>${icon('chev', 'chev')}</button>`).join('') : '<p class="note">Nothing coming up. Appointments from your care team, and ones you add, show here.</p>'}`}
-        ${p && p.date && seg === 'schedule' ? `<div class="card"><div class="cardhead"><h3>Add to my phone's calendar</h3></div>
+        <div class="card"><div class="cardhead"><h3>Upcoming</h3></div>
+          ${daily}${up.map(e => `<button class="up" data-k="${e.d}"><em class="eyebrow-sm ${e.kind}">${R.esc(upLabel(e))}</em><strong>${R.esc(e.t)}</strong><small>${e.kind === 'care' ? 'From your care team' : (e.kind === 'own' ? 'Added by you' : 'Milestone from your protocol (estimate)')}</small></button>`).join('')}
+          ${!up.length && !daily ? '<p class="note">Nothing coming up. Appointments from your care team, and ones you add, show here.</p>' : ''}
+        </div>
+        ${weekGoals()}
+        ${p && p.date ? `<div class="card"><div class="cardhead"><h3>Add to my phone's calendar</h3></div>
           <p class="note">Downloads a calendar file with your surgery day, the start of each phase and appointments from your care team. Open it on your phone and tap Add. It stays on your phone.</p>
           <label class="check"><input type="checkbox" id="icsdaily" checked> <span>Also add a daily exercise reminder at</span></label>
           <input type="time" id="icstime" value="08:00" aria-label="Reminder time">
           <div class="btns"><button class="btn" id="icsbtn">Download calendar file</button></div></div>` : ''}`;
       const go = k => { sel = k; sessionStorage.setItem('rehabProto.calsel', sel); draw(); };
-      main().querySelectorAll('.mc[data-k]').forEach(b => b.onclick = () => go(b.dataset.k));
-      main().querySelectorAll('.uprow[data-k]').forEach(b => b.onclick = () => { go(b.dataset.k); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-      main().querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { seg = b.dataset.seg; sessionStorage.setItem('rehabProto.calseg', seg); draw(); });
-      $('pm').onclick = () => go(keyOf(new Date(base.getFullYear(), base.getMonth() - 1, 1)));
-      $('nm').onclick = () => go(keyOf(new Date(base.getFullYear(), base.getMonth() + 1, 1)));
+      main().querySelectorAll('[data-k],[data-wk]').forEach(b => b.onclick = () => { go(b.dataset.k || b.dataset.wk); if (b.classList.contains('up')) window.scrollTo({ top: 0, behavior: 'smooth' }); });
+      main().querySelectorAll('[data-view]').forEach(b => b.onclick = () => { view = b.dataset.view; sessionStorage.setItem('rehabProto.calview', view); draw(); });
+      const step = n => view === 'month' ? go(keyOf(new Date(base.getFullYear(), base.getMonth() + n, 1))) : go(addDays(sel, 7 * n));
+      $('pm').onclick = () => step(-1); $('nm').onclick = () => step(1);
       const at = $('atoday'); if (at) at.onclick = () => go(todayK);
       const aa = $('aadd'); if (aa) aa.onclick = () => { const t = $('at').value.trim(); if (!t) { alert('Type a name for the appointment.'); return; } own.push({ d: sel, t: cut(t, 60), time: $('atm').value || '' }); R.store.set(APPT_KEY, own); draw(); };
       main().querySelectorAll('[data-del]').forEach(b => b.onclick = () => { own.splice(+b.dataset.del, 1); R.store.set(APPT_KEY, own); draw(); });
@@ -330,14 +382,14 @@
 
   // ---------- Receive an assignment ----------
   V5.routes.a = function (payload) {
-    R.setTitle('Assigned plan'); R.navActive('home'); setHead('Your Plan');
+    R.setTitle('Assigned plan'); R.navActive('home'); setHead('Your plan is ready', 'Check it, then save it to this phone.');
     let o; try { o = b64d(payload); } catch (e) { o = null; }
     const doc = o && docByNum(o.p);
     if (!doc || !validDate(o.d)) { main().innerHTML = '<h1>Link not recognized</h1><p>This link or code does not match a plan in this version of the app. Ask your care team for a new one.</p><p><a href="#/">Back to home</a></p>'; return; }
     const plan = { id: doc.id, date: o.d, sel: null, name: cut(o.n, 40), by: cut(o.by, 50), extras: (o.x || []).slice(0, 20).map(docByNum).filter(Boolean).map(x => x.id), pt: (o.t || []).slice(0, 10).map(t => [cut(t[0], 80), cut(t[1], 400)]).filter(t => t[0]), appts: (o.a || []).slice(0, 10).filter(a => validDate(a[0])).map(a => [a[0], /^\d{2}:\d{2}$/.test(a[1] || '') ? a[1] : '', cut(a[2], 60)]), phone: phoneDigits(o.ph), callnote: cut(o.c, 400) };
     const by = plan.by ? R.esc(plan.by) : 'your care team';
-    main().innerHTML = `<div class="card protocard"><div class="pc-icon">${icon(V5.catIcon(doc.category))}</div><div class="pc-body"><h2>Your plan is ready${plan.name ? ', ' + R.esc(plan.name) : ''}</h2><div class="pc-by">${icon('user')} Assigned by <strong>${by}</strong></div></div></div>
-      <div class="card"><p><strong>${R.esc(doc.title)}</strong></p><p>Surgery or start date: ${R.esc(nice(plan.d || plan.date, true))}</p>
+    main().innerHTML = `<section class="summary"><div class="sum-eyebrow">New plan${plan.name ? ' for ' + R.esc(plan.name) : ''}</div><h2>${R.esc(doc.title)}</h2><p>Assigned by ${by}</p></section>
+      <div class="card"><p>Surgery or start date: <strong>${R.esc(nice(plan.d || plan.date, true))}</strong></p>
       ${plan.extras.length ? `<p>Also: ${plan.extras.map(id => R.esc(R.BY_ID[id].title)).join(', ')}</p>` : ''}
       ${plan.pt.length ? `<p>${plan.pt.length} extra item${plan.pt.length === 1 ? '' : 's'} from ${by}</p>` : ''}
       ${plan.appts.length ? `<p>${plan.appts.length} appointment${plan.appts.length === 1 ? '' : 's'} on your calendar</p>` : ''}
@@ -349,41 +401,51 @@
   // ---------- Care team (athlete-facing; only people we actually know) ----------
   function careTeamHtml() {
     const p = getPlan(), ph = p ? phoneDigits(p.phone) : '';
-    const person = (ini, name, role, extra) => `<div class="person"><span class="avatar">${ini}</span><span><strong>${name}</strong><small>${role}</small></span>${extra || ''}</div>`;
     const initials = s => String(s).replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
-    let h = `<div class="card team">
-      ${person('AC', 'Dr. Austin Cole, MD', 'Orthopedic Surgeon', `<a class="iconbtn sm" href="#/browse" aria-label="Dr. Cole's protocols">${icon('book')}</a>`)}
-      ${p && p.by ? person(R.esc(initials(p.by)), R.esc(p.by), 'Assigned your plan') : ''}
-      ${person(icon('team'), 'Care Team', 'COSMC Sports Medicine')}
-    </div>`;
-    h += ph ? `<div class="card callclinic"><div class="cc-row">${icon('phone', 'tile-ic')}<span><strong>Need to reach us?</strong><small>Call the clinic number your care team gave you.</small></span></div><a class="btn outline block" href="tel:${R.esc(ph)}">${icon('phone')} Call the clinic</a><p class="note">Emergency? Call 911.</p></div>`
-      : `<div class="card callclinic"><div class="cc-row">${icon('phone', 'tile-ic')}<span><strong>Call the clinic</strong><small>${p ? 'Your care team can add the clinic phone number when they assign your plan.' : 'When your care team assigns your plan, their clinic phone shows here.'}</small></span></div><p class="note">Emergency? Call 911.</p></div>`;
+    let h = `<div class="card person-card"><div class="person"><span class="avatar">AC</span><span><strong>Dr. Austin Cole, MD</strong><small>Orthopedic Surgeon</small></span></div>
+      <p class="note">The protocols in this app come from Dr. Cole's protocols page.</p><a class="minirow" href="#/browse">${icon('book', 'mini-ic')}<span>Browse Dr. Cole's protocols</span>${icon('chev', 'chev')}</a></div>`;
+    if (p && p.by) h += `<div class="card person-card"><div class="person"><span class="avatar alt">${R.esc(initials(p.by))}</span><span><strong>${R.esc(p.by)}</strong><small>Assigned your plan</small></span></div>
+      ${(p.pt || []).length ? `<div class="guide-chips">${p.pt.map(x => `<span class="gchip">${icon('chat')} ${R.esc(x[0])}</span>`).join('')}</div>` : ''}</div>`;
+    h += `<div class="card"><div class="cardhead"><h3>Questions about your recovery?</h3></div>
+      <p>For questions about pain, exercise restrictions or changes in symptoms, contact your care team using the contact information they gave you.</p>
+      ${p && p.callnote ? `<p class="note"><strong>From your care team:</strong> ${R.esc(p.callnote)}</p>` : ''}
+      ${ph ? `<a class="btn block" href="tel:${R.esc(ph)}">${icon('phone')} Call the clinic</a>`
+        : `<details class="contact"><summary>${icon('phone')} Contact information</summary><p class="note">${p ? 'No clinic phone number was added to your plan. Use the contact details your care team gave you at your visit.' : 'When your care team assigns your plan, the clinic phone number they add shows here.'}</p></details>`}
+      <p class="sos">${icon('alert')} Emergency? Call 911.</p></div>`;
     return h;
   }
 
   // ---------- Staff tool ----------
-  V5.routes.staff = function () {
-    R.setTitle('Staff'); R.navActive('staff'); setHead('Your Care Team');
+  V5.routes.staff = function (sub) {
+    R.navActive('staff');
+    if (sub !== 'tools') {
+      R.setTitle('Care team'); setHead('Your care team', 'Who to contact about your recovery.');
+      main().innerHTML = careTeamHtml() + `<a class="card staffentry" href="#/staff/tools"><span class="se-ic">${icon('tool')}</span><span><em class="eyebrow-sm">For COSMC staff and therapists</em><strong>Staff tools: assign a plan</strong><small>Make a link, QR code or short code for an athlete.</small></span>${icon('chev', 'chev')}</a>`;
+      return;
+    }
+    R.setTitle('Staff tools'); setHead('Assign a plan', 'Make a link, QR code or code for an athlete.', 'Staff tools');
     const sd = R.store.get(STAFF_KEY, {}), bundles = R.store.get(BUNDLE_KEY, []);
     const protoOpts = R.DATA.categories.map(c => `<optgroup label="${R.esc(c)}">${R.DATA.docs.filter(x => x.category === c).map(x => `<option value="${num(x.id)}">${R.esc(x.title)}</option>`).join('')}</optgroup>`).join('');
     const defBase = location.protocol.startsWith('http') ? location.href.split('#')[0] : (R.store.get(BASE_KEY, '') || '');
-    main().innerHTML = `${careTeamHtml()}
-      <div class="divider" id="tools"><span>${icon('tool')} Staff tools: assign a plan</span></div>
-      <p class="note">For COSMC staff and therapists. Athletes can ignore this section.</p>
+    main().innerHTML = `<p class="crumb"><a href="#/staff">${icon('arrowl')} Care team</a></p>
       <div class="disclaimer">No login and nothing is stored on a server. Do not type last names, birth dates or any medical details about a patient. A first name is optional.</div>
-      <div class="card">
+      <div class="card step-card"><div class="cardhead"><h3><span class="stepn">1</span> Who and what</h3></div>
         ${bundles.length ? `<label class="f" for="sb">Start from a saved bundle</label><select id="sb"><option value="">Choose...</option>${bundles.map((b, i) => `<option value="${i}">${R.esc(b.name)}</option>`).join('')}</select>` : ''}
-        <label class="f" for="sby">Assigned by</label><input class="search" id="sby" placeholder="e.g. Dr. Cole's team, or Sarah, PT" maxlength="50" value="${R.esc(sd.by || '')}">
-        <label class="f" for="sn">Athlete's first name (optional)</label><input class="search" id="sn" maxlength="40" placeholder="e.g. Jordan">
+        <label class="f" for="sby">Assigned by</label><input class="search" id="sby" placeholder="e.g. Dr. Cole's team" maxlength="50" value="${R.esc(sd.by || '')}">
+        <label class="f" for="sn">Athlete's first name (optional)</label><input class="search" id="sn" maxlength="40" placeholder="First name only">
         <label class="f" for="sp">Main protocol</label><select id="sp"><option value="">Choose...</option>${protoOpts}</select>
         <label class="f" for="sd">Surgery or start date</label><input type="date" id="sd">
-        <label class="f">Also assign these documents (optional)</label>
+      </div>
+      <div class="card step-card"><div class="cardhead"><h3><span class="stepn">2</span> Add-ons (optional)</h3></div>
+        <label class="f">Also assign these documents</label>
         <input class="search" id="xf" placeholder="Filter documents, e.g. HEP, prehab, knee">
         <div class="xlist" id="xl">${R.DATA.docs.map(x => `<label class="xi" data-t="${R.esc((x.title + ' ' + x.category).toLowerCase())}"><input type="checkbox" value="${num(x.id)}"> <span>${R.esc(x.title)}</span></label>`).join('')}</div>
         <label class="f">Add-on items (for therapists: exercises or tasks in your own words)</label>
         <div id="ptl"></div><div class="btns"><button class="btn secondary" id="ptadd">+ Add item</button></div>
-        <label class="f">Appointments (optional)</label>
+        <label class="f">Appointments</label>
         <div id="apl"></div><div class="btns"><button class="btn secondary" id="apadd">+ Add appointment</button></div>
+      </div>
+      <div class="card step-card"><div class="cardhead"><h3><span class="stepn">3</span> Contact and link</h3></div>
         <label class="f" for="sph">Clinic phone for the Call button (optional)</label><input class="search" id="sph" inputmode="tel" maxlength="20" value="${R.esc(sd.ph || '')}">
         <label class="f" for="sc">When to call us (optional, your wording)</label><textarea class="search" id="sc" rows="3" maxlength="400">${R.esc(sd.c || '')}</textarea>
         <label class="f" for="sbase">Web address of this app (needed for links and QR codes)</label><input class="search" id="sbase" placeholder="https://..." value="${R.esc(defBase)}">
