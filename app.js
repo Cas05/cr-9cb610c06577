@@ -416,13 +416,14 @@
     else if (a === 'assign') assign(decodeURIComponent(b || ''), decodeURIComponent(h.split('/')[2] || ''), decodeURIComponent(h.split('/')[3] || ''));
     else if (window.V5 && V5.routes[a]) V5.routes[a](...h.split('/').slice(1));
     else home();
+    if (window.V19) V19.after(a, b);
     if (a) { window.scrollTo(0, 0); main.focus({ preventScroll: true }); }
   }
 
   (window.COLE_DATA ? Promise.resolve(window.COLE_DATA) : fetch('data.json').then(r => r.json())).then(j => window.V14 ? V14.load(j) : j).then(j => {
     DATA = j; if (window.V13) V13.prep(DATA); groupDocs(DATA); DATA.docs.forEach(d => { d._text = docText(d); BY_ID[d.id] = d; });
     const API = { DATA, BY_ID, store, esc, setTitle, navActive, startDay, daysSince, sectionTitle, ckRow, todayKey, linesHtml, route };
-    if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); } if (window.V14) { V14.init(API); V14.register(); } if (window.V17) { V17.init(API); V17.register(); }
+    if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); } if (window.V14) { V14.init(API); V14.register(); } if (window.V17) { V17.init(API); V17.register(); } if (window.V19) V19.init(API);
     window.addEventListener('hashchange', route); route();
   }).catch(e => { main.innerHTML = '<p>Could not load data.json. Serve this folder over http (python3 -m http.server).</p>'; });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});

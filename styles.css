@@ -459,3 +459,6 @@ details.area h3.sub{font-size:.8rem;text-transform:uppercase;letter-spacing:.04e
 .demo-steps{margin:0;padding-left:20px}
 .demo-steps li{margin:3px 0}
 @media (prefers-reduced-motion:reduce){.demo-fig.anim .f2{animation:none;opacity:0}.demo-fig.manual.show2 .f2{opacity:1}}
+.condbox{margin-bottom:12px}.condbox.inl{margin:6px 0 10px}.condbox .searchwrap{margin:4px 0 0}
+.cond-sugg{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cond-pill{border:1px solid #007550;color:#007550;background:#fff;border-radius:999px;padding:6px 12px;font:inherit;cursor:pointer}
+.cond-res{margin-top:10px}.cond-res h3{margin:0 0 6px;color:#007550}.cond-res h4.sub{margin:12px 0 4px;font-size:.9rem;text-transform:uppercase;letter-spacing:.04em;color:#4b6358}
