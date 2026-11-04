@@ -438,3 +438,24 @@ details.area h3.sub{font-size:.8rem;text-transform:uppercase;letter-spacing:.04e
 .terms dl{margin:0;display:grid;gap:6px}.terms dl div{display:flex;gap:8px;flex-wrap:wrap}.terms dt{font-weight:700;min-width:4.5em}.terms dd{margin:0}
 .ioshint{display:flex;align-items:center;gap:10px;justify-content:space-between}.ioshint p{margin:0}
 .afgrid .af-name,.afgrid .af-school,.afgrid .af-about{grid-column:1/-1}.afgrid textarea{width:100%;box-sizing:border-box}
+/* v17 hip demos */
+.demos{display:grid;gap:14px;margin:10px 0 18px}
+.demo-ph{margin:18px 0 2px}
+.demo{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.demo-fig{position:relative;aspect-ratio:16/9;background:#fff;border-bottom:1px solid var(--line)}
+.demo-fig img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.demo-fig.anim .f2{animation:demofade 4.4s ease-in-out infinite}
+@keyframes demofade{0%,30%{opacity:0}45%,80%{opacity:1}95%,100%{opacity:0}}
+.demo-fig.manual .f2{animation:none;opacity:0;transition:opacity .35s}
+.demo-fig.manual.show2 .f2{opacity:1}
+.demo-tog{position:absolute;right:8px;bottom:8px;display:flex;gap:4px}
+.demo-tog button{font:inherit;font-size:.78rem;padding:4px 10px;border-radius:99px;border:1px solid var(--accent);background:#fff;color:var(--accent);cursor:pointer}
+.demo-tog button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.demo-fig.anim:not(.manual) .demo-tog{opacity:.85}
+.demo-body{padding:12px 14px 14px}
+.demo-body h3{margin:0 0 4px;display:flex;gap:8px;align-items:center;font-size:1.05rem}
+.demo-n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:.8rem;font-weight:800}
+.demo-dose{margin:0 0 8px;font-weight:700;color:var(--accent-d)}
+.demo-steps{margin:0;padding-left:20px}
+.demo-steps li{margin:3px 0}
+@media (prefers-reduced-motion:reduce){.demo-fig.anim .f2{animation:none;opacity:0}.demo-fig.manual.show2 .f2{opacity:1}}

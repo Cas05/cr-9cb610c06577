@@ -1,7 +1,8 @@
 /* Rehab Protocol Companion - prototype. Plain JS, no backend. All personal data stays in localStorage. */
 (function () {
   'use strict';
-  const DISCLAIMER = "Educational reference from your rehab protocol. Follow your surgeon's and therapist's instructions. Not medical advice.";
+  const DISCLAIMER = "For general education only. Follow your surgeon's and therapist's instructions. Not medical advice.";
+  const HIP = d => !!(window.V17 && V17.has(d));
   const PLAN_KEY = 'rehabProto.plan';
   const CHECK_KEY = 'rehabProto.checks';
   let DATA = null, BY_ID = {};
@@ -119,12 +120,12 @@
       <p class="crumb"><a href="#/protocols">Protocols</a> / ${esc(d.area || d.category)}</p>${termsHtml(d)}
       <div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>
       <div class="btns">
-        <a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document (${esc((d.type || '').toUpperCase())})</a>
+        ${HIP(d) ? `<a class="btn" href="#/hip-demos">Watch exercise demos</a>` : `<a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document (${esc((d.type || '').toUpperCase())})</a>`}
         <button class="btn secondary" id="addplan">${plan && plan.id === d.id ? 'In My plan' : 'Use in My plan'}</button>
       </div>
-      ${(d.issues || []).length ? `<div class="flag"><strong>Tip:</strong> some details are easier to see in the original handout: ${d.issues.map(esc).join('; ')}.</div>` : ''}
-      ${d.exercises && d.exercises.length ? `<h2>Exercises in this handout</h2><ul class="exmedia">${d.exercises.map(t => `<li>${esc(t)}${V13.media(d, t)}</li>`).join('')}</ul>` : ''}
-      ${pages.length ? `<h2>Handout pages</h2><div class="pages">${pages.map((p, i) => `<img loading="lazy" src="pages/${esc(p)}" alt="Page ${i + 1} of ${esc(d.title)}">`).join('')}</div>` : ''}
+      ${!HIP(d) && (d.issues || []).length ? `<div class="flag"><strong>Tip:</strong> some details are easier to see in the original handout: ${d.issues.map(esc).join('; ')}.</div>` : ''}
+      ${HIP(d) ? V17.html(d) : ''}${!HIP(d) && d.exercises && d.exercises.length ? `<h2>Exercises in this handout</h2><ul class="exmedia">${d.exercises.map(t => `<li>${esc(t)}${V13.media(d, t)}</li>`).join('')}</ul>` : ''}
+      ${!HIP(d) && pages.length ? `<h2>Handout pages</h2><div class="pages">${pages.map((p, i) => `<img loading="lazy" src="pages/${esc(p)}" alt="Page ${i + 1} of ${esc(d.title)}">`).join('')}</div>` : ''}
       ${secs.length ? `<h2>${split ? 'Step by step' : 'Instructions'}</h2>
         
         ${secs.map((s, i) => `<details class="sec${hl.has(i) ? ' hi' : ''}" ${(!split || hl.has(i) || (!hl.size && i <= 1)) ? 'open' : ''}>
@@ -253,7 +254,7 @@
     let h = `<div class="card"><div class="cardhead"><h3>Today's exercises</h3><span class="badge-soft" id="excount">${nDone}/${rows.length} done</span></div>
       <p class="note">${sub} Ticks reset each day.</p>
       ${rows.length ? `<div class="boxlist">${rows.map((r, i) => r + V13.media(d, rowText[i])).join('')}</div>` : '<p class="note">No checklist items were found for this part of the protocol. See the Sections tab.</p>'}
-      ${d.page_images && d.page_images.length ? `<p class="note">This handout includes pictures - <a href="#/p/${d.id}">see the original pages</a>.</p>` : ''}</div>`;
+      ${HIP(d) ? `<p class="note"><a href="#/hip-demos">Watch the exercise demos</a>.</p>` : d.page_images && d.page_images.length ? `<p class="note">This handout includes pictures - <a href="#/p/${d.id}">see the original pages</a>.</p>` : ''}</div>`;
     h += `<div class="card guide"><div class="cardhead"><h3>Provider guidance</h3></div>
       ${pt.length ? `<div class="boxlist">${pt.join('')}</div>` : `<p class="note">${p.by ? 'No extra items from ' + esc(p.by) + '.' : 'Extra exercises or instructions from your therapist show here when they assign your plan.'} Always follow your care team's instructions.</p>`}
       ${(p.extras || []).map(id => BY_ID[id]).filter(Boolean).map(x => `<a class="minirow" href="#/p/${x.id}">${V5.icon(V5.catIcon(x.category), 'mini-ic')}<span>${esc(x.title)}<small>Also assigned</small></span>${V5.icon('chev', 'chev')}</a>`).join('')}</div>`;
@@ -263,7 +264,7 @@
     const secs = d.sections || [], hl = matchSections(d, p.date), sel = selSection(d, p);
     const timed = secs.map((s, i) => ({ s, i })).filter(x => x.s.title);
     let h = `<div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>
-      <div class="btns"><a class="btn" href="#/p/${d.id}">Read full protocol</a><a class="btn secondary" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document</a></div>`;
+      <div class="btns"><a class="btn" href="#/p/${d.id}">Read full protocol</a>${HIP(d) ? `<a class="btn secondary" href="#/hip-demos">Watch exercise demos</a>` : `<a class="btn secondary" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document</a>`}</div>`;
     if (timed.length) h += `<div class="cardhead plain"><h3>Sections of the protocol</h3></div>
       <p class="note">${p.date ? 'Sections whose written weeks include today are marked. Tap one to see its items on the Exercises tab.' : 'Add a date to mark the section that matches your timeline.'}</p>
       <ol class="timeline">${timed.map(x => `<li class="${hl.has(x.i) ? 'hi' : ''} ${x.i === sel ? 'sel' : ''}"><button data-sel="${x.i}" aria-pressed="${x.i === sel}">${esc(x.s.title)}${hl.has(x.i) ? '<span class="badge">Matches your date</span>' : ''}</button></li>`).join('')}</ol>`;
@@ -348,7 +349,7 @@
     const timed = secs.map((s, i) => ({ s, i })).filter(x => x.s.title);
     let sel = (p.sel != null && secs[p.sel]) ? p.sel : (hl.size ? Math.min(...hl) : (timed[0] ? timed[0].i : 0));
     let h = `<h2>${esc(d.title)}</h2><div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>
-      <div class="btns"><a class="btn secondary" href="#/p/${d.id}">Read full protocol</a><a class="btn secondary" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document</a></div>`;
+      <div class="btns"><a class="btn secondary" href="#/p/${d.id}">Read full protocol</a>${HIP(d) ? `<a class="btn secondary" href="#/hip-demos">Watch exercise demos</a>` : `<a class="btn secondary" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document</a>`}</div>`;
     if (p.date) {
       if (days < 0) h += `<p><strong>Your date is ${-days} day${days === -1 ? '' : 's'} from now.</strong></p>`;
       else h += `<p><strong>Today is day ${days} since ${esc(p.date)}</strong> (${Math.floor(days / 7)} full week${Math.floor(days / 7) === 1 ? '' : 's'} + ${days % 7} day${days % 7 === 1 ? '' : 's'}).</p>`;
@@ -373,7 +374,7 @@
         else h += ckRow(`${d.id}|${sel}|${j}|${day}`, l.t, checks, l.l);
       });
     }
-    if (d.page_images && d.page_images.length) h += `<p class="note">This document includes pictures - <a href="#/p/${d.id}">see the original pages</a>.</p>`;
+    if (HIP(d)) h += `<p class="note"><a href="#/hip-demos">Watch the exercise demos</a>.</p>`; else if (d.page_images && d.page_images.length) h += `<p class="note">This document includes pictures - <a href="#/p/${d.id}">see the original pages</a>.</p>`;
     return h;
   }
   function ckRow(key, text, checks, lvl) {
@@ -400,7 +401,7 @@
   (window.COLE_DATA ? Promise.resolve(window.COLE_DATA) : fetch('data.json').then(r => r.json())).then(j => window.V14 ? V14.load(j) : j).then(j => {
     DATA = j; if (window.V13) V13.prep(DATA); DATA.docs.forEach(d => { d._text = docText(d); BY_ID[d.id] = d; });
     const API = { DATA, BY_ID, store, esc, setTitle, navActive, startDay, daysSince, sectionTitle, ckRow, todayKey, linesHtml, route };
-    if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); } if (window.V14) { V14.init(API); V14.register(); }
+    if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); } if (window.V14) { V14.init(API); V14.register(); } if (window.V17) { V17.init(API); V17.register(); }
     window.addEventListener('hashchange', route); route();
   }).catch(e => { main.innerHTML = '<p>Could not load data.json. Serve this folder over http (python3 -m http.server).</p>'; });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});

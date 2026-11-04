@@ -488,7 +488,7 @@
   V5.routes.athlete = function () {
     R.navActive('athlete'); R.setTitle('Athlete');
     const a = getAth(), f = V5.athleteFirst();
-    setHead(f ? `${f}'s profile` : 'Athlete profile', 'Your info, saved only on this device.', 'Athlete');
+    setHead(f ? `${f}'s profile` : 'Athlete profile', 'Your info.', 'Athlete');
     const field = ([k, label, type, ph, max]) => {
       const v = R.esc(a[k] || '');
       const ctl = type === 'select' ? `<select id="ath-${k}" autocomplete="off">${ph.map(o => `<option value="${o}" ${String(a[k] || '') === o ? 'selected' : ''}>${o || 'Choose...'}</option>`).join('')}</select>`
