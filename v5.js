@@ -78,7 +78,7 @@
     const h = $('htitle'); if (h) h.textContent = t;
     const s = $('hsub'); if (s) { s.textContent = sub || ''; s.hidden = !sub; }
     const e = $('heyebrow'); if (e) e.textContent = eb || 'Your recovery';
-    const av = $('havatar'); if (av) { const p = getPlan(), n = p && p.name ? String(p.name).trim().charAt(0).toUpperCase() : ''; av.innerHTML = n ? R.esc(n) : icon('user'); av.title = 'My plan'; }
+    const av = $('havatar'); if (av) { const p = getPlan(), nm = V5.athleteFirst() || (p && p.name) || '', n = String(nm).trim().charAt(0).toUpperCase(); av.innerHTML = n ? R.esc(n) : icon('user'); av.title = 'Athlete profile'; av.href = '#/athlete'; av.setAttribute('aria-label', 'Athlete profile'); }
   };
   V5.setHead = setHead;
   const shortPh = V5.shortPh = t => {
@@ -172,8 +172,10 @@
   // ---------- Home top (Today) ----------
   V5.homeTop = function () {
     const p = getPlan();
-    if (!p) { setHead('Welcome, athlete!', 'Rehab protocols, made simple.', 'COSMC Sports Medicine'); return welcome(); }
-    setHead(p.name ? `Hello, ${p.name}!` : 'Hello!', "Here's where you are and what to do today.");
+    const an = V5.athleteFirst();
+    if (!p) { setHead(`Welcome, ${an || 'Athlete'}!`, 'Rehab protocols, made simple.', 'COSMC Sports Medicine'); return welcome(); }
+    const nm = an || p.name;
+    setHead(nm ? `Hello, ${nm}!` : 'Hello, Athlete!', "Here's where you are and what to do today.");
     return todayHtml(p);
   };
   const heroArt = `<svg class="hero-art" viewBox="0 0 220 220" aria-hidden="true" focusable="false">
@@ -218,10 +220,7 @@
         <a class="card linkrow" href="#/protocols">${icon('book', 'tile-ic')}<span><strong>Protocols</strong><small>Search or browse surgery recovery protocols</small></span>${icon('chev', 'chev')}</a>
         <a class="card linkrow" href="#/staff">${icon('team', 'tile-ic')}<span><strong>Care team</strong><small>${R.esc(team.join(', '))}</small></span>${icon('chev', 'chev')}</a>
       </div>
-      <div class="callcard">${icon('alert', 'cc-ic')}<div class="cc-body"><strong>Safety first</strong>
-        <p>This app is an educational reference, not medical advice. Follow your surgeon's and therapist's instructions. If something feels wrong, call your care team.</p>
-        <small>Clinic: <a href="tel:${CLINIC_PHONE}">${CLINIC_PHONE_TXT}</a> · <strong>Emergency? Call 911.</strong></small></div>
-        <a class="btn sm callbtn" href="tel:${CLINIC_PHONE}">${icon('phone')} Call</a></div>`;
+      ${callUsHtml(null)}${DISC_MINI}`;
   }
   function todayHtml(p) {
     const d = R.BY_ID[p.id], I = V5.planInfo(d, p), days = I.days, ph = I.ph, ci = I.ci;
@@ -250,7 +249,7 @@
     }
     h += extrasHtml(p) + apptRow(p) + contactHtml(p);
     if (days >= 0) h += `<button class="btn outline block" id="skip">${icon('pause')} It hurts - skip today</button><div id="skipmsg"></div>`;
-    h += `<p class="note center">Not your plan? <a href="#/plan">Change or clear it on My plan</a>.</p>`;
+    h += DISC_MINI + `<p class="note center">Not your plan? <a href="#/plan">Change or clear it on My plan</a>.</p>`;
     return h;
   }
   // Today's Focus: the exercise items of the week block that contains today (as written), falling back to the whole phase.
@@ -289,13 +288,15 @@
     return h;
   }
   V5.extrasHtml = extrasHtml;
-  function contactHtml(p) {
+  const callUsHtml = V5.callUsHtml = (p) => {
     const ph = clinicPh(p);
-    return `<div class="callcard">${icon('alert', 'cc-ic')}<div class="cc-body"><strong>When to call us</strong>
-      <p>${p.callnote ? R.esc(p.callnote) : 'Follow your surgeon\'s instructions. If something feels wrong, call your care team.'}</p>
-      <small>Clinic: <a href="tel:${R.esc(ph)}">${R.esc(fmtPh(ph))}</a></small><small><strong>Emergency? Call 911.</strong></small></div>
-      <a class="btn sm callbtn" href="tel:${R.esc(ph)}">${icon('phone')} Call</a></div>`;
-  }
+    return `<div class="card callus"><span class="cu-ic">${icon('phone')}</span><div class="cu-body"><strong>Questions or problems? Call us</strong>
+      <p>${p && p.callnote ? R.esc(p.callnote) : "If something feels wrong, call your care team."}</p>
+      <small>COSMC Sports Medicine clinic · <a href="tel:${R.esc(ph)}">${R.esc(fmtPh(ph))}</a></small></div>
+      <a class="btn sm" href="tel:${R.esc(ph)}">Call</a></div>`;
+  };
+  const DISC_MINI = V5.DISC_MINI = `<p class="disc-mini">For education only. Not a substitute for medical advice from your care team. In an emergency, call 911.</p>`;
+  function contactHtml(p) { return callUsHtml(p); }
   V5.wireHome = function () {
     V5.wireCode();
     const dm = $('demo'); if (dm) dm.onclick = loadDemo;
@@ -472,6 +473,59 @@
   }
 
   // ---------- Staff tool ----------
+  // ---------- Athlete profile (saved on this device only) ----------
+  const ATH_KEY = 'rehabProto.athlete';
+  const getAth = V5.getAthlete = () => { const a = R.store.get(ATH_KEY, null); return a && typeof a === 'object' ? a : {}; };
+  V5.athleteFirst = () => String(getAth().name || '').trim().split(/\s+/)[0].slice(0, 30);
+  const ATH_FIELDS = [
+    ['name', 'First name', 'text', 'e.g. Jordan', 30],
+    ['school', 'School', 'text', '', 60],
+    ['grade', 'Grade or class year', 'text', 'e.g. 11th grade or Class of 2028', 30],
+    ['sport', 'Sport', 'text', 'e.g. Soccer', 40],
+    ['position', 'Position', 'text', 'e.g. Midfielder', 40],
+    ['jersey', 'Jersey number', 'text', '', 4],
+    ['age', 'Age', 'number', '', 3],
+    ['team', 'Team or coach name', 'text', '', 60],
+    ['side', 'Dominant hand or side', 'select', ['', 'Right', 'Left', 'Both'], 0],
+    ['injury', 'Injury or surgery (optional)', 'text', 'e.g. ACL reconstruction, right knee', 80],
+    ['idate', 'Injury or surgery date (optional)', 'date', '', 0],
+    ['goal', 'My return goal', 'textarea', 'e.g. Back for spring season', 200]
+  ];
+  V5.routes.athlete = function () {
+    R.navActive('athlete'); R.setTitle('Athlete');
+    const a = getAth(), f = V5.athleteFirst();
+    setHead(f ? `${f}'s profile` : 'Athlete profile', 'Your info, saved only on this device.', 'Athlete');
+    const field = ([k, label, type, ph, max]) => {
+      const v = R.esc(a[k] || '');
+      const ctl = type === 'select' ? `<select id="ath-${k}" autocomplete="off">${ph.map(o => `<option value="${o}" ${String(a[k] || '') === o ? 'selected' : ''}>${o || 'Choose...'}</option>`).join('')}</select>`
+        : type === 'textarea' ? `<textarea class="search" id="ath-${k}" maxlength="${max}" rows="2" placeholder="${R.esc(ph)}">${v}</textarea>`
+        : `<input class="search" id="ath-${k}" type="${type}" ${type === 'number' ? 'min="5" max="99" inputmode="numeric"' : ''} ${max ? `maxlength="${max}"` : ''} placeholder="${R.esc(ph)}" value="${v}" autocomplete="off">`;
+      return `<div class="af af-${k}"><label class="f" for="ath-${k}">${label}</label>${ctl}</div>`;
+    };
+    const grp = (title, keys) => `<div class="card"><div class="cardhead"><h3>${title}</h3></div><div class="afgrid">${ATH_FIELDS.filter(x => keys.includes(x[0])).map(field).join('')}</div></div>`;
+    main().innerHTML = `<section class="summary athero"><div class="sum-top"><div class="sum-main"><div class="sum-eyebrow">COSMC Sports Medicine athlete</div>
+        <h2>${f ? R.esc(f) : 'Your profile'}</h2><p>${[a.sport, a.position, a.school].filter(Boolean).map(R.esc).join(' · ') || 'Add your sport, position and school so your app feels like yours.'}</p></div>
+        <div class="weektile"><small>${a.jersey ? 'Jersey' : 'Athlete'}</small><b>${a.jersey ? '#' + R.esc(a.jersey) : (f ? R.esc(f.charAt(0).toUpperCase()) : icon('user'))}</b></div></div></section>
+      ${grp('About you', ['name', 'age', 'grade', 'school'])}
+      ${grp('Your sport', ['sport', 'position', 'jersey', 'team', 'side'])}
+      ${grp('Your comeback', ['injury', 'idate', 'goal'])}
+      <p class="disclaimer">First name only. Do not enter last names, birth dates, medical record numbers or other medical details. Everything stays on this device. Nothing is sent anywhere.</p>
+      <div class="btns"><button class="btn" id="athsave">Save profile</button><button class="btn danger" id="athclear">Clear profile</button></div>
+      <p class="note" id="athmsg" aria-live="polite"></p>`;
+    $('athsave').onclick = () => {
+      const o = {};
+      ATH_FIELDS.forEach(([k, , , , max]) => { let v = String(($('ath-' + k) || {}).value || '').trim(); if (max) v = v.slice(0, max); if (v) o[k] = v; });
+      if (o.name) o.name = o.name.split(/\s+/)[0];
+      if (o.age && !/^\d{1,2}$/.test(o.age)) delete o.age;
+      R.store.set(ATH_KEY, o);
+      V5.routes.athlete();
+      $('athmsg').textContent = 'Saved on this device.';
+    };
+    $('athclear').onclick = () => {
+      if (!confirm('Clear your athlete profile from this device?')) return;
+      R.store.del(ATH_KEY); V5.routes.athlete(); $('athmsg').textContent = 'Profile cleared.';
+    };
+  };
   V5.routes.staff = function (sub) {
     R.navActive('staff');
     if (sub !== 'tools') {

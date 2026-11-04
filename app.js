@@ -402,9 +402,8 @@
       <div class="card"><div class="cardhead"><h3>Privacy on this device</h3></div>
         <p>Your plan, checkmarks and appointments are stored only in this browser's local storage. There is no login, no cloud sync, no messaging and no patient database.</p>
         <div class="btns"><button class="btn danger" id="reset">Reset all data on this device</button></div><p class="note" id="resetmsg"></p></div>
-      <div class="card safety"><div class="cardhead"><h3>${V5.icon('alert')} Important safety information</h3></div>
-        <p>This app does not diagnose or treat, and it does not replace your care team. ${esc(DISCLAIMER)}</p>
-        <p><strong>If something feels wrong, call your care team. In an emergency, call 911.</strong></p>${V5.callBtn('block')}</div>
+      ${V5.callUsHtml(store.get(PLAN_KEY, null))}
+      <p class="disc-mini">This app does not diagnose or treat and does not replace your care team. For education only. Not a substitute for medical advice. In an emergency, call 911.</p>
       <p class="note center">Demo: not approved by Dr. Cole or Conway Regional. Built ${esc(DATA.generated)} from <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Source page</a>.</p>`;
     document.getElementById('reset').onclick = () => {
       if (!confirm('Remove your plan, checkmarks, appointments and saved staff bundles from this browser?')) return;
