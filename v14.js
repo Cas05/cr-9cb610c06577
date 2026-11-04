@@ -12,6 +12,14 @@
   const rpc = (fn, body) => timeout(fetch(`${SB}/rest/v1/rpc/${fn}`, { method: 'POST', headers: hdr(), body: JSON.stringify(body) }), 8000)
     .then(r => r.json().then(j => { if (!r.ok) throw new Error(j.message || 'error'); return j; }));
   V14.init = api => { R = api; };
+  // Password recovery: Supabase returns ...#access_token=...&type=recovery (possibly after #/admin). Grab it before routing.
+  const grabRecovery = function () {
+    const h = location.hash || '', m = /access_token=([^&]+)/.exec(h);
+    if (m && /type=recovery/.test(h)) { sessionStorage.setItem('rehabProto.recovery', decodeURIComponent(m[1])); history.replaceState(null, '', location.pathname + location.search + '#/admin'); }
+    else if (/error_description=/.test(h)) { const e = /error_description=([^&]+)/.exec(h); sessionStorage.setItem('rehabProto.recoveryErr', decodeURIComponent(e[1].replace(/\+/g, ' '))); history.replaceState(null, '', location.pathname + location.search + '#/admin'); }
+  };
+  grabRecovery(); window.addEventListener('hashchange', grabRecovery);
+  const ADMIN_URL = 'https://cas05.github.io/cr-9cb610c06577/#/admin';
 
   // ---------- protocol content overlay ----------
   function apply(D, rows) {
@@ -83,11 +91,23 @@
   function admin() {
     R.setTitle('Admin'); R.navActive(''); V5.setHead('Admin', 'Protocol text, dates and media.', 'COSMC Sports Medicine');
     if (sess()) return panel();
+    const rec = sessionStorage.getItem('rehabProto.recovery');
+    if (rec) return setPw(rec);
+    const rerr = sessionStorage.getItem('rehabProto.recoveryErr'); sessionStorage.removeItem('rehabProto.recoveryErr');
     $('main').innerHTML = `<div class="card"><div class="cardhead"><h3>Admin sign in</h3></div>
       <form id="alog"><label class="f" for="aem">Email</label><input class="search" id="aem" type="email" autocomplete="username" required>
       <label class="f" for="apw">Password</label><input class="search" id="apw" type="password" autocomplete="current-password" required>
       <div class="btns"><button class="btn" type="submit">Sign in</button></div></form><p class="note" id="amsg" aria-live="polite"></p>
+      <p class="note"><button class="linkbtn" id="aforgot" type="button">Forgot password / set my own password</button></p>
       <p class="disc-mini">Admin only. Sign-ups are disabled.</p></div>`;
+    if (rerr) $('amsg').textContent = 'Reset link problem: ' + rerr + '. Request a new one.';
+    $('aforgot').onclick = () => {
+      const em = $('aem').value.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { $('amsg').textContent = 'Type the admin email above first.'; return; }
+      $('amsg').textContent = 'Sending...';
+      fetch(`${SB}/auth/v1/recover?redirect_to=${encodeURIComponent(ADMIN_URL)}`, { method: 'POST', headers: hdr(), body: JSON.stringify({ email: em }) })
+        .then(r => { $('amsg').textContent = r.ok ? 'If that is the admin email, a reset link is on its way. Open it on this device to set your password.' : (r.status === 429 ? 'Too many requests. Wait a few minutes and try again.' : 'Could not send the reset email.'); })
+        .catch(() => { $('amsg').textContent = 'Could not reach the server.'; });
+    };
     $('alog').onsubmit = e => {
       e.preventDefault(); $('amsg').textContent = 'Signing in...';
       fetch(`${SB}/auth/v1/token?grant_type=password`, { method: 'POST', headers: hdr(), body: JSON.stringify({ email: $('aem').value.trim(), password: $('apw').value }) })
@@ -98,6 +118,24 @@
     };
   }
   const esc = s => R.esc(s);
+  function setPw(tok) {
+    $('main').innerHTML = `<div class="card"><div class="cardhead"><h3>Set a new admin password</h3></div>
+      <form id="apwf"><label class="f" for="np1">New password (8+ characters)</label><input class="search" id="np1" type="password" autocomplete="new-password" minlength="8" required>
+      <label class="f" for="np2">Repeat new password</label><input class="search" id="np2" type="password" autocomplete="new-password" minlength="8" required>
+      <div class="btns"><button class="btn" type="submit">Save new password</button><button class="btn secondary" type="button" id="npc">Cancel</button></div></form><p class="note" id="npm" aria-live="polite"></p></div>`;
+    $('npc').onclick = () => { sessionStorage.removeItem('rehabProto.recovery'); admin(); };
+    $('apwf').onsubmit = e => {
+      e.preventDefault(); const p = $('np1').value;
+      if (p.length < 8) { $('npm').textContent = 'Use at least 8 characters.'; return; }
+      if (p !== $('np2').value) { $('npm').textContent = 'The passwords do not match.'; return; }
+      $('npm').textContent = 'Saving...';
+      fetch(`${SB}/auth/v1/user`, { method: 'PUT', headers: hdr(tok), body: JSON.stringify({ password: p }) })
+        .then(r => r.json().then(j => {
+          if (!r.ok) { $('npm').textContent = (j.msg || j.message || 'Could not save. The link may have expired; request a new one.'); return; }
+          sessionStorage.removeItem('rehabProto.recovery'); admin(); $('amsg').textContent = 'Password saved. Sign in with your new password.';
+        })).catch(() => { $('npm').textContent = 'Could not reach the server.'; });
+    };
+  }
   function upsert(id, data) {
     const s = sess(); if (!s) return Promise.reject(new Error('Signed out. Sign in again.'));
     return fetch(`${SB}/rest/v1/protocols_content`, { method: 'POST', headers: Object.assign(hdr(s.tok), { Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ id, data, updated_at: new Date().toISOString() }) })

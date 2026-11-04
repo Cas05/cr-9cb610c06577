@@ -1,0 +1,17 @@
+name: Supabase keep-alive
+# Free Supabase projects pause after 7 days without activity. This does one harmless public read twice a week.
+on:
+  schedule:
+    - cron: '17 14 * * 1,4'   # Mon and Thu 14:17 UTC
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read one row of protocols_content (public publishable key, read only)
+        run: |
+          code=$(curl -s -o /tmp/out -w '%{http_code}' \
+            -H 'apikey: sb_publishable_pXCwj0rTiv-o-HzVopKLVg_6wneftM_' \
+            'https://hotjxephhvjmowiekbhh.supabase.co/rest/v1/protocols_content?select=id&limit=1')
+          echo "HTTP $code"; test "$code" = 200
