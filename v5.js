@@ -505,7 +505,7 @@
       <p class="disc-mini">First name only. Please no last names, birth dates or medical details. Saved on this device only.</p>
       <div class="btns"><button class="btn" id="athsave">Save profile</button><button class="btn danger" id="athclear">Clear profile</button></div>
       <p class="note" id="athmsg" aria-live="polite"></p>${window.V13 ? V13.saveCardHtml() : ''}`;
-    if (window.V13) V13.wireSave();
+    if (window.V13) V13.wireSave(); if (window.V14) V14.wrapSave();
     $('athsave').onclick = () => {
       const o = {};
       ATH_FIELDS.forEach(([k, , , , max]) => { let v = String(($('ath-' + k) || {}).value || '').trim(); if (max) v = v.slice(0, max); if (v) o[k] = v; });
@@ -596,6 +596,7 @@
         <input class="search" id="bn" placeholder="e.g. THA week 0 package" maxlength="40"><div class="btns"><button class="btn secondary" id="bsave">Save bundle</button></div></div>`;
       $('ocopy').onclick = () => { $('olink').select(); if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => { $('ocopy').textContent = 'Copied'; }, () => document.execCommand('copy')); else document.execCommand('copy'); };
       $('bsave').onclick = () => { const nm = $('bn').value.trim(); if (!nm) return; const b = R.store.get(BUNDLE_KEY, []); b.push({ name: cut(nm, 40), p: o.p, x: o.x || [], t: o.t || [] }); R.store.set(BUNDLE_KEY, b); $('bsave').textContent = 'Saved'; };
+      if (window.V14) V14.wrapStaff(window.V13 ? V13.sign(o) : o);
       $('out').scrollIntoView({ behavior: 'smooth' });
     };
   };

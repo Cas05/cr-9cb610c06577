@@ -14,7 +14,7 @@
   V13.TAMPER = '<div class="flag"><strong>This link looks changed — please confirm with the clinic</strong> before using it. Call (501) 329-1510.</div>';
   const esc = s => R.esc(s);
   const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
-  V13.exKey = slug;
+  V13.exKey = slug; V13.b64e = b64e; V13.b64d = b64d; V13.safeSrc = s => safeSrc(s);
   V13.init = api => { R = api; };
 
   // ---------- data prep: admin preview patches (this device only) ----------
@@ -80,7 +80,7 @@
       <p class="note" id="savestat">${esc(S.txt)}</p>
       <div class="btns"><button class="btn" id="mksave">Make my save link</button></div>
       <div id="saveout"></div>
-      <p class="disc-mini">No server stores this. The link is your backup, so keep it somewhere safe (text it to yourself or email it). Re-save after changes. It can include your first name and appointments, so only share it with yourself or your care team.</p></div>`;
+      <p class="disc-mini">When online, a copy of this plan (no last name or medical records) is saved on the app's server under a random link; offline, the longer link holds everything. Keep the link safe and re-save after changes. It can include your first name and appointments, so only share it with yourself or your care team.</p></div>`;
   };
   V13.wireSave = () => {
     const b = $('mksave'); if (!b) return;
@@ -165,6 +165,7 @@
     if (d.exercises && d.exercises.length) return d.exercises.slice();
     const out = []; (d.sections || []).forEach(s => s.lines.forEach(l => { if (l && l.k === 'item' && out.length < 150) out.push(l.t); })); return [...new Set(out)];
   }
+  V13.exList = exList;
   const patches = () => get(K.patch, null) || { docs: {} };
   function cleanData() {
     const o = {}; Object.keys(R.DATA).forEach(k => { if (k[0] !== '_') o[k] = R.DATA[k]; });
@@ -234,6 +235,5 @@
       };
     }
   }
-  window.addEventListener('load', () => { if (window.V5) { V5.routes.r = restore; V5.routes.admin = admin; } });
   V13.register = () => { V5.routes.r = restore; V5.routes.admin = admin; };
 })();

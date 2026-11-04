@@ -191,7 +191,7 @@
       else html += exerciseSeg(d, p, I) + V5.codeCardHtml();
       html += V13.sourceLine(d) + V13.saveCardHtml() + setup + V13.missingHtml();
     }
-    main.innerHTML = html; wireShare(p); V5.wireCode(); V13.wireSave();
+    main.innerHTML = html; wireShare(p); V5.wireCode(); V13.wireSave(); if (window.V14) V14.wrapSave();
     const dm = document.getElementById('demo2'); if (dm) dm.onclick = () => V5.loadDemo();
     document.getElementById('save').onclick = () => {
       const id = document.getElementById('pp').value, date = document.getElementById('pd').value;
@@ -394,8 +394,8 @@
       </div>
       <div class="card alist"><div class="cardhead"><h3>FAQs</h3></div>
         ${faq('Do I need an account?', 'No. There is no login.')}
-        ${faq('Where is my plan saved?', 'Only in this browser on this phone (local storage). Nothing is sent to a server, and there is no tracking.')}
-        ${faq('Getting a new phone?', 'Use Save my plan (on My plan or the Athlete tab) to make a personal link. Open it on the new phone to restore your plan, checkmarks, appointments and profile. No server keeps a copy, so the link is your backup. Make a new one after changes.')}
+        ${faq('Where is my plan saved?', 'In this browser on this phone. If you tap Save my plan or open a clinic short link, a copy of that plan (first name, sport, checkmarks, appointments; no last names or records) is kept on the app server under a random link. No tracking.')}
+        ${faq('Getting a new phone?', 'Use Save my plan (on My plan or the Athlete tab) to make a personal link. Open it on the new phone to restore your plan, checkmarks, appointments and profile. Re-save after changes; the same link updates.')}
         ${faq('How does my care team give me a plan?', 'They make a link, QR code or short code with the staff tools on the Staff tab. When you open it, you tap Save.')}
         ${faq('What personal information is stored?', 'At most the first name your care team or you typed. No last names, birth dates or medical records.')}
         ${faq('Are the dates exact?', 'No. They are estimates from the weeks written in the protocol. Your surgeon and therapist decide when you move on.')}
@@ -430,10 +430,10 @@
     if (a) { window.scrollTo(0, 0); main.focus({ preventScroll: true }); }
   }
 
-  (window.COLE_DATA ? Promise.resolve(window.COLE_DATA) : fetch('data.json').then(r => r.json())).then(j => {
+  (window.COLE_DATA ? Promise.resolve(window.COLE_DATA) : fetch('data.json').then(r => r.json())).then(j => window.V14 ? V14.load(j) : j).then(j => {
     DATA = j; if (window.V13) V13.prep(DATA); DATA.docs.forEach(d => { d._text = docText(d); BY_ID[d.id] = d; });
     const API = { DATA, BY_ID, store, esc, setTitle, navActive, startDay, daysSince, sectionTitle, ckRow, todayKey, linesHtml, route };
-    if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); }
+    if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); } if (window.V14) { V14.init(API); V14.register(); }
     window.addEventListener('hashchange', route); route();
   }).catch(e => { main.innerHTML = '<p>Could not load data.json. Serve this folder over http (python3 -m http.server).</p>'; });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
