@@ -22,7 +22,7 @@
   const CLINIC_PHONE = V5.CLINIC_PHONE = '5013291510', CLINIC_PHONE_TXT = V5.CLINIC_PHONE_TXT = '(501) 329-1510';
   const clinicPh = p => phoneDigits(p && p.phone) || CLINIC_PHONE;
   const fmtPh = d => /^\d{10}$/.test(d) ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d;
-  V5.callBtn = (cls) => `<a class="btn ${cls || ''}" href="tel:${CLINIC_PHONE}">${icon('phone')} Call the clinic ${CLINIC_PHONE_TXT}</a>`;
+  V5.callBtn = (cls) => `<a class="btn ${cls || ''}" href="tel:${CLINIC_PHONE}">${icon('phone')} Call</a>`;
 
   V5.init = function (api) { R = api; };
 
@@ -291,8 +291,7 @@
   const callUsHtml = V5.callUsHtml = (p) => {
     const ph = clinicPh(p);
     return `<div class="card callus"><span class="cu-ic">${icon('phone')}</span><div class="cu-body"><strong>Questions or problems? Call us</strong>
-      <p>${p && p.callnote ? R.esc(p.callnote) : "If something feels wrong, call your care team."}</p>
-      <small>COSMC Sports Medicine clinic · <a href="tel:${R.esc(ph)}">${R.esc(fmtPh(ph))}</a></small></div>
+      <p>${p && p.callnote ? R.esc(p.callnote) : "If something feels wrong, call your care team."}</p></div>
       <a class="btn sm" href="tel:${R.esc(ph)}">Call</a></div>`;
   };
   const DISC_MINI = V5.DISC_MINI = `<p class="disc-mini">For education only. Not a substitute for medical advice from your care team. In an emergency, call 911.</p>`;
@@ -468,7 +467,7 @@
     h += `<div class="card"><div class="cardhead"><h3>Questions about your recovery?</h3></div>
       <p>For questions about pain, exercise restrictions or changes in symptoms, call the clinic.</p>
       ${p && p.callnote ? `<p class="note"><strong>From your care team:</strong> ${R.esc(p.callnote)}</p>` : ''}
-      <a class="btn block" href="tel:${R.esc(ph)}">${icon('phone')} Call the clinic ${R.esc(fmtPh(ph))}</a>
+      <a class="btn block" href="tel:${R.esc(ph)}">${icon('phone')} Call</a>
       <p class="sos">${icon('alert')} Emergency? Call 911.</p></div>`;
     return h;
   }
@@ -476,12 +475,13 @@
   // ---------- Staff tool ----------
   // ---------- Athlete profile (saved on this device only) ----------
   const ATH_KEY = 'rehabProto.athlete';
-  const ATH_OK = ['name', 'about', 'sport', 'position'];
+  const ATH_OK = ['name', 'school', 'about', 'sport', 'position'];
   const getAth = V5.getAthlete = () => { const a = R.store.get(ATH_KEY, null), o = {}; if (a && typeof a === 'object') ATH_OK.forEach(k => { if (a[k]) o[k] = String(a[k]); }); return o; }; // older saved fields (jersey, injury, ...) are ignored
   V5.athleteFirst = () => String(getAth().name || '').trim().split(/\s+/)[0].slice(0, 30);
   const ATH_FIELDS = [
     ['name', 'First name', 'text', 'e.g. Jordan', 30],
-    ['about', 'About you (optional)', 'textarea', 'e.g. school, age, anything you want to share', 200],
+    ['school', 'School (optional)', 'text', 'e.g. Conway High School', 60],
+    ['about', 'About you (optional)', 'textarea', 'e.g. grade, goals, anything you want to share', 200],
     ['sport', 'Sport', 'text', 'e.g. Soccer', 40],
     ['position', 'Position (optional)', 'text', 'e.g. Midfielder', 40]
   ];
@@ -498,13 +498,20 @@
     };
     const grp = (title, keys) => `<div class="card"><div class="cardhead"><h3>${title}</h3></div><div class="afgrid">${ATH_FIELDS.filter(x => keys.includes(x[0])).map(field).join('')}</div></div>`;
     main().innerHTML = `<section class="summary athero"><div class="sum-top"><div class="sum-main"><div class="sum-eyebrow">COSMC Sports Medicine athlete</div>
-        <h2>${f ? R.esc(f) : 'Your profile'}</h2><p>${[a.sport, a.position].filter(Boolean).map(R.esc).join(' · ') || 'Add your name and sport so your app feels like yours.'}</p></div>
+        <h2>${f ? R.esc(f) : 'Your profile'}</h2><p>${[a.sport, a.position, a.school].filter(Boolean).map(R.esc).join(' · ') || 'Add your name and sport so your app feels like yours.'}</p></div>
         <div class="weektile"><small>Athlete</small><b>${f ? R.esc(f.charAt(0).toUpperCase()) : icon('user')}</b></div></div></section>
-      ${grp('About you', ['name', 'about'])}
+      ${grp('About you', ['name', 'school', 'about'])}
       ${grp('Sport', ['sport', 'position'])}
       <p class="disc-mini">First name only. Please no last names, birth dates or medical details. Saved on this device only.</p>
       <div class="btns"><button class="btn" id="athsave">Save profile</button><button class="btn danger" id="athclear">Clear profile</button></div>
-      <p class="note" id="athmsg" aria-live="polite"></p>${window.V13 ? V13.saveCardHtml() : ''}`;
+      <p class="note" id="athmsg" aria-live="polite"></p>${window.V13 ? V13.saveCardHtml() : ''}
+      <div class="card"><div class="cardhead"><h3>This device</h3></div><p>Your plan, checkmarks, appointments and profile are kept in this browser. Getting a new phone? Use Save my plan above and open your link on the new phone.</p>
+        <div class="btns"><button class="btn danger" id="reset">Reset all data on this device</button></div><p class="note" id="resetmsg" aria-live="polite"></p></div>`;
+    $('reset').onclick = () => {
+      if (!confirm('Remove your plan, checkmarks, appointments, profile and saved staff bundles from this browser?')) return;
+      [localStorage, sessionStorage].forEach(st => { try { Object.keys(st).filter(k => k.startsWith('rehabProto.')).forEach(k => st.removeItem(k)); } catch (e) {} });
+      V5.routes.athlete(); $('resetmsg').textContent = 'Done. All data from this app was removed from this browser.';
+    };
     if (window.V13) V13.wireSave(); if (window.V14) V14.wrapSave();
     $('athsave').onclick = () => {
       const o = {};

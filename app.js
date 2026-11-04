@@ -16,7 +16,7 @@
   const BODY_ORDER = ['Shoulder', 'Elbow', 'Hip', 'Knee', 'Knee/Hip Arthroplasty', 'Foot & Ankle'];
 
   function docText(d) {
-    const parts = [d.title, d.category];
+    const parts = [d.title, d.orig_title || '', d.category, d.area || ''];
     (d.sections || []).forEach(s => { if (s.title) parts.push(s.title); s.lines.forEach(l => l && parts.push(l.t)); });
     (d.exercises || []).forEach(t => parts.push(t));
     return parts.join(' \n ').toLowerCase();
@@ -27,20 +27,24 @@
 
   // ---------------- Home ----------------
   const head = (t, sub, eb) => V5.setHead(t, sub, eb);
+  const WORDS = [['flexion','bending the joint'],['extension','straightening the joint'],['hyperextension','straightening past straight'],['abduction','moving the arm or leg out to the side'],['adduction','moving the arm or leg in toward the body'],['gait','the way you walk'],['quad','front thigh muscle'],['isometric','tightening a muscle without moving the joint'],['eccentric','slowly lowering against resistance'],['proprioception','balance and joint position sense'],['plyometric','jumping and hopping drills'],['patellofemoral','the joint behind the kneecap'],['scapular','shoulder blade'],['sling','arm support strap'],['effusion','swelling inside the joint'],['modalities','treatments like ice, heat or electrical stimulation'],['as tolerated','as much as is comfortable']];
+  function termsHtml(d) {
+    const t = (d.terms || []).map(x => [x.abbr, x.plain]).concat(WORDS.filter(([w]) => d._text.includes(w)));
+    if (!t.length) return '';
+    return `<details class="sec terms"><summary>Words to know (${t.length})</summary><div class="secbody"><dl>${t.map(([a, p]) => `<div><dt>${esc(a)}</dt><dd>${esc(p)}</dd></div>`).join('')}</dl></div></details>`;
+  }
+  function areaIcon(a) { return a === 'Return to Sport' ? 'run' : (/Neck|General/.test(a) ? 'dumbbell' : 'joint'); }
+  const hepOf = d => d.group === 'hep';
   function browseHtml() {
-    const cats = DATA.categories;
-    const count = c => DATA.docs.filter(d => d.category === c).length;
-    const body = BODY_ORDER.filter(c => cats.includes(c)).concat(cats.filter(c => !BODY_ORDER.includes(c) && !/home exercise|return-to-sport/i.test(c)));
-    const special = cats.filter(c => /home exercise|return-to-sport/i.test(c));
-    return `<div class="searchwrap">${V5.icon('search', 'sic')}<input id="q" class="search" type="search" placeholder="Search surgery, injury, sport or exercise" autocomplete="off" aria-label="Search protocols"></div>
+    const areas = DATA.areas || DATA.categories;
+    const inA = a => DATA.docs.filter(d => (d.area || d.category) === a).sort((x, y) => x.title.localeCompare(y.title));
+    return `<div class="searchwrap">${V5.icon('search', 'sic')}<input id="q" class="search" type="search" placeholder="Search: knee, ACL, ankle, shoulder..." autocomplete="off" aria-label="Search protocols"></div>
       <div id="results" aria-live="polite"></div>
-      <div id="browse">
-        <h2 class="sect">By body area</h2>
-        <div class="grid">${body.map(c => tile(c, count(c))).join('')}</div>
-        <h2 class="sect">Programs</h2>
-        <div class="grid">${special.map(c => tile(c, count(c))).join('')}</div>
-        <p class="count">${DATA.docs.length} surgery recovery protocols. <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Source page</a></p>
-      </div>`;
+      <div id="browse">${areas.map(a => {
+        const docs = inA(a), surg = docs.filter(d => !hepOf(d)), hep = docs.filter(hepOf);
+        return `<details class="area" id="area-${slug(a)}"><summary>${V5.icon(areaIcon(a), 'mini-ic')}<span><strong>${esc(a)}</strong><small>${docs.length} protocol${docs.length === 1 ? '' : 's'}</small></span>${V5.icon('chev', 'chev')}</summary>
+          ${surg.length ? (hep.length ? '<h3 class="sub">Recovery plans</h3>' : '') + listHtml(surg, false) : ''}${hep.length ? '<h3 class="sub">Home exercises</h3>' + listHtml(hep, false) : ''}</details>`;
+      }).join('')}</div>`;
   }
   function wireBrowse() {
     const q = document.getElementById('q'); if (!q) return;
@@ -51,9 +55,16 @@
     setTitle(''); navActive('home');
     main.innerHTML = V5.homeTop();
     V5.wireHome();
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !navigator.standalone && !matchMedia('(display-mode: standalone)').matches;
+    if (ios && !store.get('rehabProto.iosHint', false)) {
+      const c = document.createElement('div'); c.className = 'card ioshint'; c.setAttribute('role', 'note');
+      c.innerHTML = '<p><strong>Add to your Home Screen:</strong> tap the Share button, then <em>Add to Home Screen</em>.</p><button class="linkbtn" aria-label="Dismiss tip">Got it</button>';
+      c.querySelector('button').onclick = () => { store.set('rehabProto.iosHint', true); c.remove(); };
+      main.prepend(c);
+    }
   }
   function browse() {
-    setTitle('Protocols'); navActive('protocols'); head('Protocols', `Search or browse all ${DATA.docs.length} rehab protocols.`, 'Explore protocols');
+    setTitle('Protocols'); navActive('protocols'); head('Protocols', 'Find your recovery plan by body area.', 'Rehab protocols');
     main.innerHTML = browseHtml();
     wireBrowse();
   }
@@ -66,23 +77,20 @@
     if (!terms.length) { res.innerHTML = ''; browse.hidden = false; return; }
     browse.hidden = true;
     const scored = DATA.docs.map(d => {
-      const t = (d.title + ' ' + d.category).toLowerCase();
+      const t = (d.title + ' ' + (d.area || d.category)).toLowerCase();
       if (!terms.every(w => d._text.includes(w))) return null;
       return { d, s: terms.reduce((a, w) => a + (t.includes(w) ? 10 : 1), 0) };
     }).filter(Boolean).sort((a, b) => b.s - a.s || a.d.title.localeCompare(b.d.title));
     res.innerHTML = `<p class="count">${scored.length} match${scored.length === 1 ? '' : 'es'}</p>` + listHtml(scored.map(x => x.d), true);
   }
   function listHtml(docs, showCat) {
-    return `<ul class="list">${docs.map(d => `<li><a href="#/p/${d.id}">${V5.icon(V5.catIcon(d.category), 'mini-ic')}<span>${esc(d.title)}${showCat ? `<small>${esc(d.category)}</small>` : ''}</span>${V5.icon('chev', 'chev')}</a></li>`).join('')}</ul>`;
+    return `<ul class="list">${docs.map(d => `<li><a href="#/p/${d.id}">${V5.icon(areaIcon(d.area || d.category), 'mini-ic')}<span>${esc(d.title)}${showCat ? `<small>${esc(d.area || d.category)}</small>` : ''}</span>${V5.icon('chev', 'chev')}</a></li>`).join('')}</ul>`;
   }
 
   function category(s) {
-    const c = DATA.categories.find(x => slug(x) === s);
-    if (!c) return notFound();
-    setTitle(c); navActive('protocols'); head(c, `${DATA.docs.filter(d => d.category === c).length} documents`, 'Protocols');
-    const docs = DATA.docs.filter(d => d.category === c);
-    main.innerHTML = `<p class="crumb"><a href="#/protocols">Protocols</a> / ${esc(c)}</p>
-      <p class="note">Titles and grouping are as listed on the source protocols page.</p>${listHtml(docs, false)}`;
+    browse();
+    const a = (DATA.areas || []).find(x => slug(x) === s) || ((DATA.docs.find(d => slug(d.category) === s) || {}).area);
+    const el = a && document.getElementById('area-' + slug(a)); if (el) { el.open = true; el.scrollIntoView(); }
   }
 
   // ---------------- Protocol detail ----------------
@@ -101,30 +109,28 @@
 
   function detail(id) {
     const d = BY_ID[id]; if (!d) return notFound();
-    setTitle(d.title); navActive('protocols'); head(d.title, d.category, 'Full protocol');
+    setTitle(d.title); navActive('protocols'); head(d.title, d.area || d.category, 'Protocol');
     const plan = store.get(PLAN_KEY, null);
     const hl = plan && plan.id === d.id ? matchSections(d, plan.date) : new Set();
     const pages = (d.page_images || []);
     const secs = d.sections || [];
     const split = !!d.split_on;
     main.innerHTML = `
-      <p class="crumb"><a href="#/protocols">Protocols</a> / <a href="#/c/${slug(d.category)}">${esc(d.category)}</a></p>
-      ${V13.sourceLine(d)}
+      <p class="crumb"><a href="#/protocols">Protocols</a> / ${esc(d.area || d.category)}</p>${termsHtml(d)}
       <div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>
       <div class="btns">
         <a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document (${esc((d.type || '').toUpperCase())})</a>
         <button class="btn secondary" id="addplan">${plan && plan.id === d.id ? 'In My plan' : 'Use in My plan'}</button>
       </div>
-      ${(d.issues || []).length ? `<div class="flag"><strong>Check the original:</strong> ${d.issues.map(esc).join('; ')}.</div>` : ''}
-      ${d.exercises && d.exercises.length ? `<h2>Exercises in this handout</h2><p class="note">Names as printed in the handout (auto-detected; the page images below are the complete handout).</p><ul class="exmedia">${d.exercises.map(t => `<li>${esc(t)}${V13.media(d, t)}</li>`).join('')}</ul>` : ''}
-      ${pages.length ? `<h2>Original pages</h2><p class="note">Images of the original document pages, including exercise pictures.</p><div class="pages">${pages.map((p, i) => `<img loading="lazy" src="pages/${esc(p)}" alt="Page ${i + 1} of ${esc(d.title)}">`).join('')}</div>` : ''}
-      ${secs.length ? `<h2>${split ? 'Protocol by section' : (pages.length ? 'Extracted text' : 'Full text')}</h2>
-        ${split ? '<p class="note">Sections follow the document\'s own headings. Text is shown as written in the original.</p>' : '<p class="note">This document has no phase/week headings we could split on, so it is shown as one block.</p>'}
+      ${(d.issues || []).length ? `<div class="flag"><strong>Tip:</strong> some details are easier to see in the original handout: ${d.issues.map(esc).join('; ')}.</div>` : ''}
+      ${d.exercises && d.exercises.length ? `<h2>Exercises in this handout</h2><ul class="exmedia">${d.exercises.map(t => `<li>${esc(t)}${V13.media(d, t)}</li>`).join('')}</ul>` : ''}
+      ${pages.length ? `<h2>Handout pages</h2><div class="pages">${pages.map((p, i) => `<img loading="lazy" src="pages/${esc(p)}" alt="Page ${i + 1} of ${esc(d.title)}">`).join('')}</div>` : ''}
+      ${secs.length ? `<h2>${split ? 'Step by step' : 'Instructions'}</h2>
+        
         ${secs.map((s, i) => `<details class="sec${hl.has(i) ? ' hi' : ''}" ${(!split || hl.has(i) || (!hl.size && i <= 1)) ? 'open' : ''}>
           <summary>${esc(sectionTitle(s, i))}${hl.has(i) ? '<span class="badge">Matches your date</span>' : ''}</summary>
           <div class="secbody">${linesHtml(s.lines)}</div></details>`).join('')}` : ''}
-      <div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>
-      <p class="note">Source: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.url)}</a></p>`;
+      <div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>`;
     document.getElementById('addplan').onclick = () => {
       const cur = store.get(PLAN_KEY, null);
       store.set(PLAN_KEY, { id: d.id, date: cur && cur.id === d.id ? cur.date : (cur ? cur.date : '') });
@@ -189,7 +195,7 @@
       if (seg === 'protocol') html += protocolSeg(d, p);
       else if (seg === 'progress') html += progressSeg(d, p, I);
       else html += exerciseSeg(d, p, I) + V5.codeCardHtml();
-      html += V13.sourceLine(d) + V13.saveCardHtml() + setup + V13.missingHtml();
+      html += V13.saveCardHtml() + setup + V13.missingHtml();
     }
     main.innerHTML = html; wireShare(p); V5.wireCode(); V13.wireSave(); if (window.V14) V14.wrapSave();
     const dm = document.getElementById('demo2'); if (dm) dm.onclick = () => V5.loadDemo();
@@ -376,44 +382,6 @@
   }
   function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
-  function about() {
-    setTitle('About'); navActive('about'); head('About this app', 'Rehab protocols, one day at a time.', 'COSMC Sports Medicine');
-    const flagged = DATA.docs.filter(d => (d.issues || []).length).length;
-    const count = c => DATA.docs.filter(d => d.category === c).length;
-    const cats = BODY_ORDER.filter(c => DATA.categories.includes(c)).concat(DATA.categories.filter(c => !BODY_ORDER.includes(c) && !/return-to-sport/i.test(c)));
-    const rts = DATA.categories.find(c => /return-to-sport/i.test(c));
-    const faq = (q, a) => `<details class="arow"><summary><span>${q}</span>${V5.icon('chev', 'chev')}</summary><div class="arow-body"><p>${a}</p></div></details>`;
-    main.innerHTML = `<div class="card">
-        <div class="ah-logo"><img src="cosmc-logo.png" alt="COSMC" width="180" height="35"></div>
-        <h3 class="ah-h">Built for the road back</h3>
-        <p>This app turns publicly posted surgery recovery protocols into a phone-friendly plan: your phase, a daily checklist, your Road to Return and your calendar. Text is extracted automatically from each document and lightly formatted. Wording is not rewritten.</p>
-        <p class="note">${DATA.docs.length} documents are included; ${flagged} have notes asking you to check the original (pictures, tables or scanned pages). Every protocol page links to its original document.</p></div>
-      <div class="card alist"><div class="cardhead"><h3>Protocols</h3></div>
-        ${cats.map(c => `<a class="minirow" href="#/c/${slug(c)}">${V5.icon(V5.catIcon(c), 'mini-ic')}<span>${esc(c)} <small>${count(c)}</small></span>${V5.icon('chev', 'chev')}</a>`).join('')}
-        ${rts ? `<a class="minirow" href="#/c/${slug(rts)}">${V5.icon('run', 'mini-ic')}<span>Return-to-sport guide <small>${count(rts)} programs</small></span>${V5.icon('chev', 'chev')}</a>` : ''}
-      </div>
-      <div class="card alist"><div class="cardhead"><h3>FAQs</h3></div>
-        ${faq('Do I need an account?', 'No. There is no login.')}
-        ${faq('Where is my plan saved?', 'In this browser on this phone. If you tap Save my plan or open a clinic short link, a copy of that plan (first name, sport, checkmarks, appointments; no last names or records) is kept on the app server under a random link. No tracking.')}
-        ${faq('Getting a new phone?', 'Use Save my plan (on My plan or the Athlete tab) to make a personal link. Open it on the new phone to restore your plan, checkmarks, appointments and profile. Re-save after changes; the same link updates.')}
-        ${faq('How does my care team give me a plan?', 'They make a link, QR code or short code with the staff tools on the Staff tab. When you open it, you tap Save.')}
-        ${faq('What personal information is stored?', 'At most the first name your care team or you typed. No last names, birth dates or medical records.')}
-        ${faq('Are the dates exact?', 'No. They are estimates from the weeks written in the protocol. Your surgeon and therapist decide when you move on.')}
-        ${faq('Can I use it offline?', "After the first visit, most of the app works offline. Add it to your home screen from your browser's Share menu.")}
-      </div>
-      <div class="card"><div class="cardhead"><h3>Privacy on this device</h3></div>
-        <p>Your plan, checkmarks and appointments are stored only in this browser's local storage. There is no login, no cloud sync, no messaging and no patient database.</p>
-        <div class="btns"><button class="btn danger" id="reset">Reset all data on this device</button></div><p class="note" id="resetmsg"></p></div>
-      ${V5.callUsHtml(store.get(PLAN_KEY, null))}
-      <p class="disc-mini">This app does not diagnose or treat and does not replace your care team. For education only. Not a substitute for medical advice. In an emergency, call 911.</p>
-      <p class="note center">Demo: not approved by Dr. Cole or Conway Regional. Built ${esc(DATA.generated)} from <a href="${esc(DATA.source_page)}" target="_blank" rel="noopener">Source page</a>.</p>`;
-    document.getElementById('reset').onclick = () => {
-      if (!confirm('Remove your plan, checkmarks, appointments and saved staff bundles from this browser?')) return;
-      [localStorage, sessionStorage].forEach(st => { try { Object.keys(st).filter(k => k.startsWith('rehabProto.')).forEach(k => st.removeItem(k)); } catch (e) {} });
-      document.getElementById('resetmsg').textContent = 'Done. All data from this app was removed from this browser.';
-      head('About this app', 'Rehab protocols, one day at a time.', 'COSMC Sports Medicine');
-    };
-  }
   function notFound() { head('Not found'); main.innerHTML = '<div class="card"><p>That page was not found.</p><p><a href="#/">Back to home</a></p></div>'; }
 
   function route() {
@@ -425,7 +393,6 @@
     else if (a === 'browse' || a === 'protocols') browse();
     else if (a === 'assign') assign(decodeURIComponent(b || ''), decodeURIComponent(h.split('/')[2] || ''), decodeURIComponent(h.split('/')[3] || ''));
     else if (window.V5 && V5.routes[a]) V5.routes[a](...h.split('/').slice(1));
-    else if (a === 'about') about();
     else home();
     if (a) { window.scrollTo(0, 0); main.focus({ preventScroll: true }); }
   }

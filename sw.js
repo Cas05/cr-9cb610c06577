@@ -1,5 +1,5 @@
 // Simple offline cache: app shell precached, everything else cached on first use.
-const CACHE = 'rehab-proto-v15';
+const CACHE = 'rehab-proto-v16';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './data.json', './data.js', './v5.js', './v13.js', './v14.js', './qrcode.js', './manifest.json', './icon.svg', './cosmc-logo.png', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });

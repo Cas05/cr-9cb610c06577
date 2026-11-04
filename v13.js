@@ -11,7 +11,7 @@
   const fnv = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
   V13.sign = o => { const c = Object.assign({}, o); delete c.k; c.k = fnv(JSON.stringify(c)); return c; };
   V13.checkOk = o => { if (!o || !('k' in o)) return null; const c = Object.assign({}, o); const k = c.k; delete c.k; return fnv(JSON.stringify(c)) === k; };
-  V13.TAMPER = '<div class="flag"><strong>This link looks changed — please confirm with the clinic</strong> before using it. Call (501) 329-1510.</div>';
+  V13.TAMPER = '<div class="flag"><strong>This link looks changed — please confirm with the clinic</strong> before using it. Call the clinic.</div>';
   const esc = s => R.esc(s);
   const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
   V13.exKey = slug; V13.b64e = b64e; V13.b64d = b64d; V13.safeSrc = s => safeSrc(s);
@@ -102,7 +102,7 @@
       const bd = document.querySelector('#savecard .badge-soft'); if (bd) { bd.textContent = 'Up to date'; bd.classList.remove('warn'); }
     };
   };
-  V13.missingHtml = () => `<p class="note missing">Plan missing? Ask the clinic to resend your link or call <a href="tel:5013291510">(501) 329-1510</a>.</p>`;
+  V13.missingHtml = () => `<p class="note missing">Plan missing? Ask the clinic to resend your link or <a href="tel:5013291510">call the clinic</a>.</p>`;
 
   // restore route  #/r/<payload>
   function restore(payload) {
@@ -122,7 +122,7 @@
       const set = (k, v) => v ? R.store.set(k, v) : R.store.del(k);
       set(K.plan, p); set(K.checks, o.checks && typeof o.checks === 'object' ? o.checks : null); set(K.appts, Array.isArray(o.appts) ? o.appts.slice(0, 100) : null);
       set(K.seen, o.seen && typeof o.seen === 'object' ? o.seen : null);
-      const ath = {}; ['name', 'about', 'sport', 'position'].forEach(f => { if (a[f]) ath[f] = String(a[f]).slice(0, 200); }); set(K.ath, Object.keys(ath).length ? ath : null);
+      const ath = {}; ['name', 'school', 'about', 'sport', 'position'].forEach(f => { if (a[f]) ath[f] = String(a[f]).slice(0, 200); }); set(K.ath, Object.keys(ath).length ? ath : null);
       R.store.set(K.last, { t: o.t ? new Date(o.t).toISOString() : new Date().toISOString(), sig: sigOf(state()) });
       location.hash = '#/';
     };

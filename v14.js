@@ -26,7 +26,7 @@
     const by = {}; D.docs.forEach(d => { by[d.id] = d; });
     (rows || []).forEach(r => { const x = r.data || {};
       if (r.id === '_global') { if (x.updated) D.updated = x.updated; return; }
-      const d = by[r.id]; if (d) ['title', 'updated', 'sections', 'media'].forEach(f => { if (x[f] !== undefined) d[f] = x[f]; });
+      const d = by[r.id]; if (d) ['title', 'updated', 'sections', 'media', 'area', 'terms', 'exercises'].forEach(f => { if (x[f] !== undefined) d[f] = x[f]; });
     });
   }
   V14.load = function (D) {
