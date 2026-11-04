@@ -175,7 +175,7 @@
   function dl(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
   function adminPanel() {
     const main = document.getElementById('main'), D = R.DATA, P = patches();
-    const opts = D.categories.map(c => `<optgroup label="${esc(c)}">${D.docs.filter(x => x.category === c).map(x => `<option value="${esc(x.id)}">${P.docs[x.id] ? '* ' : ''}${esc(x.title)}</option>`).join('')}</optgroup>`).join('');
+    const opts = (D.areas||D.categories).map(c => `<optgroup label="${esc(c)}">${D.docs.filter(x => (D.areas ? x.area : x.category) === c).map(x => `<option value="${esc(x.id)}">${P.docs[x.id] ? '* ' : ''}${esc(x.title)}</option>`).join('')}</optgroup>`).join('');
     main.innerHTML = `<div class="flag"><strong>Download, then send to Jarvis to publish.</strong> This page cannot publish by itself. Edits preview only in this browser until published.</div>
       <div class="card"><div class="cardhead"><h3>Data</h3>${D._preview ? `<span class="badge-soft warn">${D._preview} edited (preview)</span>` : ''}</div>
         <label class="f" for="aupd">Last updated (all protocols, default)</label><input type="date" id="aupd" value="${esc(D.updated || '')}">

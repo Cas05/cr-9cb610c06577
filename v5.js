@@ -535,7 +535,7 @@
     }
     R.setTitle('Staff tools'); setHead('Assign a plan', 'Make a link, QR code or code for an athlete.', 'Staff tools');
     const sd = R.store.get(STAFF_KEY, {}), bundles = R.store.get(BUNDLE_KEY, []);
-    const protoOpts = R.DATA.categories.map(c => `<optgroup label="${R.esc(c)}">${R.DATA.docs.filter(x => x.category === c).map(x => `<option value="${num(x.id)}">${R.esc(x.title)}</option>`).join('')}</optgroup>`).join('');
+    const protoOpts = R.DATA.areas.map(c => `<optgroup label="${R.esc(c)}">${R.DATA.docs.filter(x => x.area === c).map(x => `<option value="${num(x.id)}">${R.esc(x.title)}</option>`).join('')}</optgroup>`).join('');
     const defBase = location.protocol.startsWith('http') ? location.href.split('#')[0] : (R.store.get(BASE_KEY, '') || '');
     main().innerHTML = `<p class="crumb"><a href="#/staff">${icon('arrowl')} Care team</a></p>
       <div class="disclaimer">No login and nothing is stored on a server. Do not type last names, birth dates or any medical details about a patient. A first name is optional.</div>

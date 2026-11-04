@@ -150,7 +150,7 @@
   function cleanData() { const D = R.DATA, o = {}; Object.keys(D).forEach(k => { if (k[0] !== '_') o[k] = D[k]; }); o.docs = D.docs.map(d => { const c = {}; Object.keys(d).forEach(k => { if (k[0] !== '_') c[k] = d[k]; }); return c; }); return o; }
   function panel() {
     const D = R.DATA, slug = V13.exKey;
-    const opts = D.categories.map(c => `<optgroup label="${esc(c)}">${D.docs.filter(x => x.category === c).map(x => `<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('')}</optgroup>`).join('');
+    const opts = (D.areas||D.categories).map(c => `<optgroup label="${esc(c)}">${D.docs.filter(x => (D.areas ? x.area : x.category) === c).map(x => `<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('')}</optgroup>`).join('');
     $('main').innerHTML = `<div class="flag"><strong>Signed in as admin.</strong> Saves go live for everyone right away.</div>
       <div class="card"><div class="cardhead"><h3>All protocols</h3></div>
         <label class="f" for="aupd">Last updated (default for all)</label><input type="date" id="aupd" value="${esc(D.updated || '')}">

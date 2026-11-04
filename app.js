@@ -16,6 +16,27 @@
   };
   const BODY_ORDER = ['Shoulder', 'Elbow', 'Hip', 'Knee', 'Knee/Hip Arthroplasty', 'Foot & Ankle'];
 
+
+  const GROUPS = ['Shoulder', 'Elbow', 'Hip', 'Knee', 'Foot & Ankle', 'Neck & Spine', 'General', 'Return to Sport'];
+  function groupOf(d) {
+    const id = d.id || '', c = d.category || '', t = d.title || '';
+    if (/^return-to-/.test(id) || /return-to-sport/i.test(c) || /^return to /i.test(t)) return 'Return to Sport';
+    if (GROUPS.includes(d.area) && d.area !== 'Return to Sport') return d.area;
+    if (/knee/i.test(c + ' ' + t) && !/hip/i.test(t)) return 'Knee';
+    if (/hip/i.test(c + ' ' + t)) return 'Hip';
+    if (GROUPS.includes(c)) return c;
+    if (/neck|spine|cervical|back/i.test(t)) return 'Neck & Spine';
+    return 'General';
+  }
+  function groupDocs(D) {
+    const nat = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    D.docs.forEach(d => { d.area = groupOf(d); });
+    D.areas = GROUPS.filter(g => D.docs.some(d => d.area === g));
+    D.docs.sort((x, y) => GROUPS.indexOf(x.area) - GROUPS.indexOf(y.area) || ((x.group === 'hep') - (y.group === 'hep')) || nat(x.title, y.title));
+    D.groupLabel = c => c;
+  }
+  window.REHAB_GROUP = { GROUPS, groupOf };
+
   function docText(d) {
     const parts = [d.title, d.orig_title || '', d.category, d.area || ''];
     (d.sections || []).forEach(s => { if (s.title) parts.push(s.title); s.lines.forEach(l => l && parts.push(l.t)); });
@@ -38,7 +59,7 @@
   const hepOf = d => d.group === 'hep';
   function browseHtml() {
     const areas = DATA.areas || DATA.categories;
-    const inA = a => DATA.docs.filter(d => (d.area || d.category) === a).sort((x, y) => x.title.localeCompare(y.title));
+    const inA = a => DATA.docs.filter(d => (d.area || d.category) === a);
     return `<div class="searchwrap">${V5.icon('search', 'sic')}<input id="q" class="search" type="search" placeholder="Search: knee, ACL, ankle, shoulder..." autocomplete="off" aria-label="Search protocols"></div>
       <div id="results" aria-live="polite"></div>
       <div id="browse">${areas.map(a => {
@@ -169,7 +190,7 @@
   function plan() {
     setTitle('My plan'); navActive('plan'); head('My recovery plan', "Your protocol, step by step.");
     const p = store.get(PLAN_KEY, null), d = p && BY_ID[p.id];
-    const opts = DATA.categories.map(c => `<optgroup label="${esc(c)}">${DATA.docs.filter(x => x.category === c).map(x => `<option value="${x.id}" ${p && p.id === x.id ? 'selected' : ''}>${esc(x.title)}</option>`).join('')}</optgroup>`).join('');
+    const opts = DATA.areas.map(c => `<optgroup label="${esc(c)}">${DATA.docs.filter(x => x.area === c).map(x => `<option value="${x.id}" ${p && p.id === x.id ? 'selected' : ''}>${esc(x.title)}</option>`).join('')}</optgroup>`).join('');
     const setup = `<details class="card setup" ${d ? '' : 'open'}><summary>${d ? 'Change my plan' : 'Set up my own plan'}</summary>
         <p class="note">Saved only in this browser on this device. Nothing is sent anywhere.</p>
         <label class="f" for="pp">Protocol or program</label>
@@ -399,7 +420,7 @@
   }
 
   (window.COLE_DATA ? Promise.resolve(window.COLE_DATA) : fetch('data.json').then(r => r.json())).then(j => window.V14 ? V14.load(j) : j).then(j => {
-    DATA = j; if (window.V13) V13.prep(DATA); DATA.docs.forEach(d => { d._text = docText(d); BY_ID[d.id] = d; });
+    DATA = j; if (window.V13) V13.prep(DATA); groupDocs(DATA); DATA.docs.forEach(d => { d._text = docText(d); BY_ID[d.id] = d; });
     const API = { DATA, BY_ID, store, esc, setTitle, navActive, startDay, daysSince, sectionTitle, ckRow, todayKey, linesHtml, route };
     if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); } if (window.V14) { V14.init(API); V14.register(); } if (window.V17) { V17.init(API); V17.register(); }
     window.addEventListener('hashchange', route); route();
