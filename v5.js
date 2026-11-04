@@ -220,7 +220,7 @@
         <a class="card linkrow" href="#/protocols">${icon('book', 'tile-ic')}<span><strong>Protocols</strong><small>Search or browse surgery recovery protocols</small></span>${icon('chev', 'chev')}</a>
         <a class="card linkrow" href="#/staff">${icon('team', 'tile-ic')}<span><strong>Care team</strong><small>${R.esc(team.join(', '))}</small></span>${icon('chev', 'chev')}</a>
       </div>
-      ${callUsHtml(null)}${DISC_MINI}`;
+      ${callUsHtml(null)}${window.V13 ? V13.missingHtml() : ''}${DISC_MINI}`;
   }
   function todayHtml(p) {
     const d = R.BY_ID[p.id], I = V5.planInfo(d, p), days = I.days, ph = I.ph, ci = I.ci;
@@ -437,7 +437,8 @@
     if (!doc || !validDate(o.d)) { main().innerHTML = '<h1>Link not recognized</h1><p>This link or code does not match a plan in this version of the app. Ask your care team for a new one.</p><p><a href="#/">Back to home</a></p>'; return; }
     const plan = { id: doc.id, date: o.d, sel: null, name: cut(o.n, 40), by: cut(o.by, 50), extras: (o.x || []).slice(0, 20).map(docByNum).filter(Boolean).map(x => x.id), pt: (o.t || []).slice(0, 10).map(t => [cut(t[0], 80), cut(t[1], 400)]).filter(t => t[0]), appts: (o.a || []).slice(0, 10).filter(a => validDate(a[0])).map(a => [a[0], /^\d{2}:\d{2}$/.test(a[1] || '') ? a[1] : '', cut(a[2], 60)]), phone: phoneDigits(o.ph), callnote: cut(o.c, 400) };
     const by = plan.by ? R.esc(plan.by) : 'your care team';
-    main().innerHTML = `<section class="summary"><div class="sum-eyebrow">New plan${plan.name ? ' for ' + R.esc(plan.name) : ''}</div><h2>${R.esc(doc.title)}</h2><p>Assigned by ${by}</p></section>
+    const tam = window.V13 && V13.checkOk(o) === false;
+    main().innerHTML = `${tam ? V13.TAMPER : ''}<section class="summary"><div class="sum-eyebrow">New plan${plan.name ? ' for ' + R.esc(plan.name) : ''}</div><h2>${R.esc(doc.title)}</h2><p>Assigned by ${by}</p></section>
       <div class="card"><p>Surgery or start date: <strong>${R.esc(nice(plan.d || plan.date, true))}</strong></p>
       ${plan.extras.length ? `<p>Also: ${plan.extras.map(id => R.esc(R.BY_ID[id].title)).join(', ')}</p>` : ''}
       ${plan.pt.length ? `<p>${plan.pt.length} extra item${plan.pt.length === 1 ? '' : 's'} from ${by}</p>` : ''}
@@ -475,21 +476,14 @@
   // ---------- Staff tool ----------
   // ---------- Athlete profile (saved on this device only) ----------
   const ATH_KEY = 'rehabProto.athlete';
-  const getAth = V5.getAthlete = () => { const a = R.store.get(ATH_KEY, null); return a && typeof a === 'object' ? a : {}; };
+  const ATH_OK = ['name', 'about', 'sport', 'position'];
+  const getAth = V5.getAthlete = () => { const a = R.store.get(ATH_KEY, null), o = {}; if (a && typeof a === 'object') ATH_OK.forEach(k => { if (a[k]) o[k] = String(a[k]); }); return o; }; // older saved fields (jersey, injury, ...) are ignored
   V5.athleteFirst = () => String(getAth().name || '').trim().split(/\s+/)[0].slice(0, 30);
   const ATH_FIELDS = [
     ['name', 'First name', 'text', 'e.g. Jordan', 30],
-    ['school', 'School', 'text', '', 60],
-    ['grade', 'Grade or class year', 'text', 'e.g. 11th grade or Class of 2028', 30],
+    ['about', 'About you (optional)', 'textarea', 'e.g. school, age, anything you want to share', 200],
     ['sport', 'Sport', 'text', 'e.g. Soccer', 40],
-    ['position', 'Position', 'text', 'e.g. Midfielder', 40],
-    ['jersey', 'Jersey number', 'text', '', 4],
-    ['age', 'Age', 'number', '', 3],
-    ['team', 'Team or coach name', 'text', '', 60],
-    ['side', 'Dominant hand or side', 'select', ['', 'Right', 'Left', 'Both'], 0],
-    ['injury', 'Injury or surgery (optional)', 'text', 'e.g. ACL reconstruction, right knee', 80],
-    ['idate', 'Injury or surgery date (optional)', 'date', '', 0],
-    ['goal', 'My return goal', 'textarea', 'e.g. Back for spring season', 200]
+    ['position', 'Position (optional)', 'text', 'e.g. Midfielder', 40]
   ];
   V5.routes.athlete = function () {
     R.navActive('athlete'); R.setTitle('Athlete');
@@ -504,19 +498,18 @@
     };
     const grp = (title, keys) => `<div class="card"><div class="cardhead"><h3>${title}</h3></div><div class="afgrid">${ATH_FIELDS.filter(x => keys.includes(x[0])).map(field).join('')}</div></div>`;
     main().innerHTML = `<section class="summary athero"><div class="sum-top"><div class="sum-main"><div class="sum-eyebrow">COSMC Sports Medicine athlete</div>
-        <h2>${f ? R.esc(f) : 'Your profile'}</h2><p>${[a.sport, a.position, a.school].filter(Boolean).map(R.esc).join(' · ') || 'Add your sport, position and school so your app feels like yours.'}</p></div>
-        <div class="weektile"><small>${a.jersey ? 'Jersey' : 'Athlete'}</small><b>${a.jersey ? '#' + R.esc(a.jersey) : (f ? R.esc(f.charAt(0).toUpperCase()) : icon('user'))}</b></div></div></section>
-      ${grp('About you', ['name', 'age', 'grade', 'school'])}
-      ${grp('Your sport', ['sport', 'position', 'jersey', 'team', 'side'])}
-      ${grp('Your comeback', ['injury', 'idate', 'goal'])}
-      <p class="disclaimer">First name only. Do not enter last names, birth dates, medical record numbers or other medical details. Everything stays on this device. Nothing is sent anywhere.</p>
+        <h2>${f ? R.esc(f) : 'Your profile'}</h2><p>${[a.sport, a.position].filter(Boolean).map(R.esc).join(' · ') || 'Add your name and sport so your app feels like yours.'}</p></div>
+        <div class="weektile"><small>Athlete</small><b>${f ? R.esc(f.charAt(0).toUpperCase()) : icon('user')}</b></div></div></section>
+      ${grp('About you', ['name', 'about'])}
+      ${grp('Sport', ['sport', 'position'])}
+      <p class="disc-mini">First name only. Please no last names, birth dates or medical details. Saved on this device only.</p>
       <div class="btns"><button class="btn" id="athsave">Save profile</button><button class="btn danger" id="athclear">Clear profile</button></div>
-      <p class="note" id="athmsg" aria-live="polite"></p>`;
+      <p class="note" id="athmsg" aria-live="polite"></p>${window.V13 ? V13.saveCardHtml() : ''}`;
+    if (window.V13) V13.wireSave();
     $('athsave').onclick = () => {
       const o = {};
       ATH_FIELDS.forEach(([k, , , , max]) => { let v = String(($('ath-' + k) || {}).value || '').trim(); if (max) v = v.slice(0, max); if (v) o[k] = v; });
       if (o.name) o.name = o.name.split(/\s+/)[0];
-      if (o.age && !/^\d{1,2}$/.test(o.age)) delete o.age;
       R.store.set(ATH_KEY, o);
       V5.routes.athlete();
       $('athmsg').textContent = 'Saved on this device.';
@@ -585,7 +578,7 @@
       let base = $('sbase').value.trim(); if (!/^https?:\/\//i.test(base)) { alert('Enter the web address where this app is hosted (starts with https://). Links and QR codes need it.'); return; }
       base = base.split('#')[0]; R.store.set(BASE_KEY, base);
       R.store.set(STAFF_KEY, { by: $('sby').value.trim(), ph: $('sph').value.trim(), c: $('sc').value.trim() });
-      const url = base + '#/a/' + b64e(o);
+      const url = base + '#/a/' + b64e(window.V13 ? V13.sign(o) : o);
       const simple = !o.x && !o.t && !o.a && !o.ph && !o.c && !o.n && !o.by;
       const code = simple ? `CR-${o.p}-${o.d.slice(2, 4)}${o.d.slice(5, 7)}${o.d.slice(8, 10)}` : null;
       let qr = '';
@@ -598,6 +591,7 @@
         ${qr}
         ${code ? `<p>Short code: <strong>${code}</strong> <span class="note">(athlete types it on the home screen; the code carries only the protocol and date)</span></p>` : '<p class="note">No short code is made when you add a name, extras, items, appointments or a non-default phone number, because the code can only carry the protocol and date. Use the link or QR code.</p>'}
         <p class="note">Nothing was saved or sent anywhere. Treat the link like any message: it contains what you typed above.</p>
+        <p class="flag"><strong>Links can include first name, age and appointments — only send to the patient.</strong></p>
         <label class="f" for="bn">Save this setup as a bundle on this computer (optional)</label>
         <input class="search" id="bn" placeholder="e.g. THA week 0 package" maxlength="40"><div class="btns"><button class="btn secondary" id="bsave">Save bundle</button></div></div>`;
       $('ocopy').onclick = () => { $('olink').select(); if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => { $('ocopy').textContent = 'Copied'; }, () => document.execCommand('copy')); else document.execCommand('copy'); };

@@ -109,13 +109,14 @@
     const split = !!d.split_on;
     main.innerHTML = `
       <p class="crumb"><a href="#/protocols">Protocols</a> / <a href="#/c/${slug(d.category)}">${esc(d.category)}</a></p>
+      ${V13.sourceLine(d)}
       <div class="disclaimer" role="note">${esc(DISCLAIMER)}</div>
       <div class="btns">
         <a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">Open original document (${esc((d.type || '').toUpperCase())})</a>
         <button class="btn secondary" id="addplan">${plan && plan.id === d.id ? 'In My plan' : 'Use in My plan'}</button>
       </div>
       ${(d.issues || []).length ? `<div class="flag"><strong>Check the original:</strong> ${d.issues.map(esc).join('; ')}.</div>` : ''}
-      ${d.exercises && d.exercises.length ? `<h2>Exercises in this handout</h2><p class="note">Names as printed in the handout (auto-detected; the page images below are the complete handout).</p><ul>${d.exercises.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      ${d.exercises && d.exercises.length ? `<h2>Exercises in this handout</h2><p class="note">Names as printed in the handout (auto-detected; the page images below are the complete handout).</p><ul class="exmedia">${d.exercises.map(t => `<li>${esc(t)}${V13.media(d, t)}</li>`).join('')}</ul>` : ''}
       ${pages.length ? `<h2>Original pages</h2><p class="note">Images of the original document pages, including exercise pictures.</p><div class="pages">${pages.map((p, i) => `<img loading="lazy" src="pages/${esc(p)}" alt="Page ${i + 1} of ${esc(d.title)}">`).join('')}</div>` : ''}
       ${secs.length ? `<h2>${split ? 'Protocol by section' : (pages.length ? 'Extracted text' : 'Full text')}</h2>
         ${split ? '<p class="note">Sections follow the document\'s own headings. Text is shown as written in the original.</p>' : '<p class="note">This document has no phase/week headings we could split on, so it is shown as one block.</p>'}
@@ -174,7 +175,7 @@
     let html;
     if (!d) {
       html = `<section class="summary"><div class="sum-eyebrow">No active protocol</div><h2>Set up your plan</h2><p>Use the code or link from your care team, or pick your protocol and surgery date below.</p><div class="sum-actions"><button class="sum-link" id="demo2">Try a demo plan ${V5.icon('chev')}</button></div></section>
-        ${V5.codeCardHtml()}${setup}`;
+        ${V5.codeCardHtml()}${V13.missingHtml()}${setup}`;
     } else {
       const I = V5.planInfo(d, p), seg = sessionStorage.getItem('rehabProto.planseg') || 'ex';
       const cur = I.ci >= 0 ? I.ph[I.ci] : null;
@@ -188,9 +189,9 @@
       if (seg === 'protocol') html += protocolSeg(d, p);
       else if (seg === 'progress') html += progressSeg(d, p, I);
       else html += exerciseSeg(d, p, I) + V5.codeCardHtml();
-      html += setup;
+      html += V13.sourceLine(d) + V13.saveCardHtml() + setup + V13.missingHtml();
     }
-    main.innerHTML = html; wireShare(p); V5.wireCode();
+    main.innerHTML = html; wireShare(p); V5.wireCode(); V13.wireSave();
     const dm = document.getElementById('demo2'); if (dm) dm.onclick = () => V5.loadDemo();
     document.getElementById('save').onclick = () => {
       const id = document.getElementById('pp').value, date = document.getElementById('pd').value;
@@ -223,9 +224,9 @@
   }
   function exerciseSeg(d, p, I) {
     const day = todayKey(), checks = store.get(CHECK_KEY, {}), secs = d.sections || [];
-    let rows = [], heading = 'Your Exercises', sub = '';
+    let rows = [], rowText = [], heading = 'Your Exercises', sub = '';
     if (d.exercises && d.exercises.length) {
-      rows = d.exercises.map((t, j) => exRow(`${d.id}|ex|${j}|${day}`, t, '', checks, 'dumbbell'));
+      rowText = d.exercises.slice(); rows = d.exercises.map((t, j) => exRow(`${d.id}|ex|${j}|${day}`, t, '', checks, 'dumbbell'));
       sub = 'Exercise names as printed in the handout (auto-detected; may be incomplete).';
     } else {
       const sel = selSection(d, p), s = secs[sel];
@@ -237,7 +238,7 @@
           const it = { j, t: l.t, week }; all.push(it); if (/exercise|progression/i.test(lab)) ex.push(it);
         });
         const use = ex.length ? ex : all;
-        rows = use.map(x => exRow(`${d.id}|${sel}|${x.j}|${day}`, x.t, x.week, checks, 'dumbbell'));
+        rowText = use.map(x => x.t); rows = use.map(x => exRow(`${d.id}|${sel}|${x.j}|${day}`, x.t, x.week, checks, 'dumbbell'));
         sub = `From ${esc(sectionTitle(s, sel))}${ex.length ? ' (exercise items)' : ''}, worded as written in the protocol.`;
       }
     }
@@ -245,7 +246,7 @@
     const nDone = rows.filter(r => / done"/.test(r.split('>')[0])).length;
     let h = `<div class="card"><div class="cardhead"><h3>Today's exercises</h3><span class="badge-soft" id="excount">${nDone}/${rows.length} done</span></div>
       <p class="note">${sub} Ticks reset each day.</p>
-      ${rows.length ? `<div class="boxlist">${rows.join('')}</div>` : '<p class="note">No checklist items were found for this part of the protocol. See the Sections tab.</p>'}
+      ${rows.length ? `<div class="boxlist">${rows.map((r, i) => r + V13.media(d, rowText[i])).join('')}</div>` : '<p class="note">No checklist items were found for this part of the protocol. See the Sections tab.</p>'}
       ${d.page_images && d.page_images.length ? `<p class="note">This handout includes pictures - <a href="#/p/${d.id}">see the original pages</a>.</p>` : ''}</div>`;
     h += `<div class="card guide"><div class="cardhead"><h3>Provider guidance</h3></div>
       ${pt.length ? `<div class="boxlist">${pt.join('')}</div>` : `<p class="note">${p.by ? 'No extra items from ' + esc(p.by) + '.' : 'Extra exercises or instructions from your therapist show here when they assign your plan.'} Always follow your care team's instructions.</p>`}
@@ -394,6 +395,7 @@
       <div class="card alist"><div class="cardhead"><h3>FAQs</h3></div>
         ${faq('Do I need an account?', 'No. There is no login.')}
         ${faq('Where is my plan saved?', 'Only in this browser on this phone (local storage). Nothing is sent to a server, and there is no tracking.')}
+        ${faq('Getting a new phone?', 'Use Save my plan (on My plan or the Athlete tab) to make a personal link. Open it on the new phone to restore your plan, checkmarks, appointments and profile. No server keeps a copy, so the link is your backup. Make a new one after changes.')}
         ${faq('How does my care team give me a plan?', 'They make a link, QR code or short code with the staff tools on the Staff tab. When you open it, you tap Save.')}
         ${faq('What personal information is stored?', 'At most the first name your care team or you typed. No last names, birth dates or medical records.')}
         ${faq('Are the dates exact?', 'No. They are estimates from the weeks written in the protocol. Your surgeon and therapist decide when you move on.')}
@@ -429,8 +431,9 @@
   }
 
   (window.COLE_DATA ? Promise.resolve(window.COLE_DATA) : fetch('data.json').then(r => r.json())).then(j => {
-    DATA = j; DATA.docs.forEach(d => { d._text = docText(d); BY_ID[d.id] = d; });
-    if (window.V5) V5.init({ DATA, BY_ID, store, esc, setTitle, navActive, startDay, daysSince, sectionTitle, ckRow, todayKey, linesHtml, route });
+    DATA = j; if (window.V13) V13.prep(DATA); DATA.docs.forEach(d => { d._text = docText(d); BY_ID[d.id] = d; });
+    const API = { DATA, BY_ID, store, esc, setTitle, navActive, startDay, daysSince, sectionTitle, ckRow, todayKey, linesHtml, route };
+    if (window.V5) V5.init(API); if (window.V13) { V13.init(API); V13.register(); }
     window.addEventListener('hashchange', route); route();
   }).catch(e => { main.innerHTML = '<p>Could not load data.json. Serve this folder over http (python3 -m http.server).</p>'; });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
